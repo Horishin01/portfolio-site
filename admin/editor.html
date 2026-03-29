@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>Portfolio Admin Editor</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ENS%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./admin.css?v=20260329-9" />
+  </head>
+  <body>
+    <div class="admin-shell is-visible" id="adminShell">
+      <header class="admin-header">
+        <div>
+          <p class="admin-eyebrow">Portfolio Admin</p>
+          <h1>管理画面</h1>
+          <p class="admin-note">
+            ここで保存した内容は、このブラウザの `localStorage` に保存されます。静的サイトのため、別ブラウザや別端末へは自動同期されません。
+          </p>
+        </div>
+
+        <div class="admin-header-actions">
+          <button class="button button-save" id="saveButton" type="button">保存</button>
+          <button class="button button-ghost" id="backToPortalButton" type="button">ポータルへ戻る</button>
+          <button class="button button-ghost" id="logoutButton" type="button">ログアウト</button>
+          <a class="button button-secondary" href="../">サイトを見る</a>
+        </div>
+      </header>
+
+      <section class="admin-toolbar">
+        <div class="toolbar-group">
+          <button class="button button-secondary" id="exportButton" type="button">JSON 出力</button>
+          <button class="button button-secondary" id="importButton" type="button">JSON 読み込み</button>
+        </div>
+        <div class="toolbar-group">
+          <button class="button button-ghost" id="resetButton" type="button">初期値に戻す</button>
+          <button class="button button-ghost" id="clearButton" type="button">保存データ削除</button>
+        </div>
+      </section>
+
+      <p class="status-message" id="statusMessage">管理画面を読み込んでいます。</p>
+
+      <main class="admin-layout" id="adminApp"></main>
+    </div>
+
+    <input id="importFile" type="file" accept="application/json" hidden />
+
+    <script src="./auth.js?v=20260329-9"></script>
+    <script src="../site-data.js?v=20260329-9"></script>
+    <script src="./admin.js?v=20260329-9"></script>
+  </body>
+</html>

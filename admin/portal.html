@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>Portfolio Administrator Portal</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ENS%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./admin.css?v=20260329-9" />
+  </head>
+  <body>
+    <div class="portal-transition-shell is-visible">
+      <section class="portal-transition-screen">
+        <div class="portal-hero">
+          <p class="admin-eyebrow">Administrator Portal</p>
+          <h1>Secure Control Center</h1>
+          <p class="admin-note">
+            認証済みセッションを確認しました。ここから管理画面へ入り、ポートフォリオの編集を開始できます。
+          </p>
+        </div>
+
+        <div class="portal-overview-grid">
+          <article class="portal-card">
+            <span class="portal-card-label">User</span>
+            <strong>admin</strong>
+            <p>Frontend-only temporary authentication</p>
+          </article>
+          <article class="portal-card">
+            <span class="portal-card-label">Storage</span>
+            <strong>localStorage</strong>
+            <p>このブラウザに保存された編集データを利用します。</p>
+          </article>
+          <article class="portal-card">
+            <span class="portal-card-label">Modules</span>
+            <strong>Editor Ready</strong>
+            <p>Profile / Skills / Works / Personal / Contact を編集できます。</p>
+          </article>
+        </div>
+
+        <div class="portal-status-panel" aria-label="初期化ステータス">
+          <div class="portal-status-item">
+            <span class="portal-status-dot"></span>
+            <div>
+              <strong>Session Verification</strong>
+              <p>ログイン資格情報の確認が完了しています。</p>
+            </div>
+          </div>
+          <div class="portal-status-item">
+            <span class="portal-status-dot"></span>
+            <div>
+              <strong>Editor Access</strong>
+              <p>管理画面を開くと各編集セクションを読み込みます。</p>
+            </div>
+          </div>
+          <div class="portal-status-item">
+            <span class="portal-status-dot"></span>
+            <div>
+              <strong>Local Data Ready</strong>
+              <p>保存済みデータと初期値をこのブラウザで利用できます。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="portal-actions">
+          <button class="button" id="openAdminButton" type="button">管理画面を開く</button>
+          <a class="button button-secondary" href="../">サイトを見る</a>
+          <button class="button button-ghost" id="portalLogoutButton" type="button">ログアウト</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="./auth.js?v=20260329-9"></script>
+    <script src="./portal.js?v=20260329-9"></script>
+  </body>
+</html>

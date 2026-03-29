@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <title>Portfolio Admin Login</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
+    />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ENS%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./admin.css?v=20260329-9" />
+  </head>
+  <body>
+    <div class="auth-shell" id="authShell">
+      <section class="auth-card">
+        <p class="admin-eyebrow">Portfolio Admin</p>
+        <h1>ログイン</h1>
+        <p class="admin-note">
+          簡易版のためフロントエンドのみで認証しています。将来的に DB / バックエンド実装へ置き換える前提です。
+        </p>
+
+        <form class="auth-form" id="loginForm" novalidate>
+          <div class="field">
+            <label for="loginId">ID</label>
+            <input id="loginId" name="loginId" type="text" autocomplete="username" required />
+          </div>
+
+          <div class="field">
+            <label for="loginPassword">パスワード</label>
+            <div class="password-input-shell">
+              <input
+                id="loginPassword"
+                name="loginPassword"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                class="password-visibility-button"
+                id="passwordVisibilityButton"
+                type="button"
+                aria-label="パスワードを表示"
+                aria-pressed="false"
+                title="パスワードを表示・非表示"
+              >
+                <i class="fa-regular fa-eye-slash" id="passwordVisibilityIcon" aria-hidden="true"></i>
+              </button>
+            </div>
+          </div>
+
+          <p class="status-message" id="loginMessage">ID とパスワードを入力してください。</p>
+          <button class="button" id="loginButton" type="submit">ログイン</button>
+        </form>
+      </section>
+    </div>
+
+    <script src="./auth.js?v=20260329-9"></script>
+    <script src="./login.js?v=20260329-9"></script>
+  </body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      id="metaDescription"
+      name="description"
+      content="元サイトの骨格を踏まえて再構成した、インフラエンジニア向けポートフォリオ"
+    />
+    <title>Yoshimura Takuya | Infrastructure Engineer Portfolio</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ENS%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="background-grid" aria-hidden="true"></div>
+    <div class="background-orb background-orb-left" aria-hidden="true"></div>
+    <div class="background-orb background-orb-right" aria-hidden="true"></div>
+
+    <div class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="#top" aria-label="ページ上部へ移動">
+          <span class="brand-mark" id="brandMark">NS</span>
+          <span class="brand-copy">
+            <strong id="brandName">Yoshimura Takuya</strong>
+            <small id="brandRole">Infrastructure Engineer</small>
+          </span>
+        </a>
+
+        <nav class="site-nav" aria-label="グローバルナビゲーション">
+          <a href="#profile">PROFILE</a>
+          <a href="#skills">SKILL</a>
+          <a href="#works">WORKS</a>
+          <a href="#personal">PERSONAL</a>
+          <a href="#contact">CONTACT</a>
+        </nav>
+      </header>
+
+      <main id="top">
+        <section class="hero section">
+          <div class="hero-copy reveal">
+            <p class="eyebrow" id="heroEyebrow">Infrastructure Engineer</p>
+            <h1 id="heroTitle">Naoto Suzuki's portfolio</h1>
+            <p class="hero-summary" id="heroSummary">
+              AWS を中心に、設計・構築・運用改善・自動化までを一気通貫で整理したインフラエンジニア向けポートフォリオです。
+            </p>
+
+            <ul class="hero-tag-list" id="heroTags" aria-label="主な技術">
+              <li>AWS</li>
+              <li>Terraform</li>
+              <li>Linux</li>
+              <li>Monitoring</li>
+            </ul>
+          </div>
+
+          <aside class="hero-panel reveal" aria-label="担当領域の概要">
+            <p class="panel-kicker">Core Focus</p>
+            <div class="hero-highlight-list" id="heroHighlights">
+              <article>
+                <span>Primary Cloud</span>
+                <strong>AWS / EC2 / RDS / Route 53</strong>
+              </article>
+            </div>
+          </aside>
+        </section>
+
+        <section class="section" id="profile">
+          <div class="section-heading reveal">
+            <p class="eyebrow">PROFILE</p>
+            <h2 id="profileHeading">プロフィール</h2>
+            <p class="section-intro" id="profileIntro">
+              元サイトの PROFILE セクションをベースに、インフラ領域で任せられる範囲が伝わるよう再構成しています。
+            </p>
+          </div>
+
+          <div class="profile-grid">
+            <article class="panel reveal">
+              <h3>Overview</h3>
+              <p class="lead-copy" id="profileLead">
+                オンプレミス運用、アプリケーション開発、Web 開発の経験を経て、現在はクラウド基盤の設計・構築・運用改善に軸足を置いています。
+              </p>
+              <div class="body-copy" id="profileBody">
+                <p>インフラは表に出にくい仕事だからこそ、可用性だけでなく、運用しやすさ、変更のしやすさ、ドキュメントの残し方まで含めて品質だと考えています。</p>
+              </div>
+            </article>
+
+            <article class="panel panel-stack reveal">
+              <div>
+                <h3 id="focusHeading">Focus Areas</h3>
+                <ul class="focus-list" id="profileFocusList">
+                  <li>AWS 基盤設計 / 構築 / 移行</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 id="certificationsHeading">Qualifications</h3>
+                <ul class="chip-list" id="certificationList">
+                  <li>基本情報技術者</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+
+          <div class="timeline-block reveal">
+            <div class="timeline-heading">
+              <h3 id="timelineHeading">Career</h3>
+              <p class="section-intro" id="timelineIntro">
+                担当領域がどのように広がってきたかを、実務の流れに沿って整理しています。
+              </p>
+            </div>
+
+            <div class="timeline" id="careerTimeline">
+              <article class="timeline-item">
+                <div class="timeline-side">
+                  <span class="timeline-period">現在</span>
+                  <p class="timeline-org">クラウド / インフラ領域</p>
+                </div>
+                <div class="timeline-content">
+                  <h4>設計・構築・運用改善</h4>
+                  <p>AWS を中心に、設計、構築、IaC、監視、障害対応、運用改善を横断して担当する想定です。</p>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="skills">
+          <div class="section-heading reveal">
+            <p class="eyebrow">SKILL</p>
+            <h2 id="skillsHeading">スキル</h2>
+            <p class="section-intro" id="skillsIntro">
+              元サイトの SKILL の見せ方をベースに、インフラエンジニア向けのカテゴリに整理しています。
+            </p>
+          </div>
+
+          <div class="skills-stack" id="skillCategoryList">
+            <article class="skill-card reveal">
+              <div class="skill-card-head">
+                <h3>クラウド / サーバー</h3>
+                <p>AWS を中心とした構築と、Linux ベースの運用・設定変更。</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="works">
+          <div class="section-heading reveal">
+            <p class="eyebrow">WORKS</p>
+            <h2 id="worksHeading">実績</h2>
+            <p class="section-intro" id="worksIntro">
+              インフラ領域では、どう安定させ、どう運用しやすくしたかが分かる形で整理しています。
+            </p>
+          </div>
+
+          <div class="works-list" id="worksList">
+            <article class="work-card reveal">
+              <div class="work-summary">
+                <div class="work-meta">
+                  <span>Infrastructure Refresh</span>
+                  <span>2026</span>
+                </div>
+                <h3>AWS 基盤の段階移行と標準化</h3>
+                <p class="work-role">要件整理 / 構成設計 / Terraform / 手順整備</p>
+                <p>オンプレミス中心の環境から AWS へ段階移行する想定で、構成設計と環境標準化を進めたサンプルです。</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="personal">
+          <div class="section-heading reveal">
+            <p class="eyebrow">PERSONAL</p>
+            <h2 id="personalHeading">個人で取り組んでいること</h2>
+            <p class="section-intro" id="personalIntro">
+              以下はダミーテキストです。業務外で継続している学習や検証内容を、採用担当者が把握しやすい形で整理する想定です。
+            </p>
+          </div>
+
+          <div class="personal-grid" id="personalList">
+            <article class="personal-card reveal">
+              <p class="personal-meta">Home Lab</p>
+              <h3>検証環境の継続運用</h3>
+              <p>
+                クラウドとローカル環境の両方で、構成変更や監視設定を試せる小規模な検証基盤を継続的に触っている想定のダミーテキストです。
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="contact">
+          <div class="contact-panel reveal">
+            <div>
+              <p class="eyebrow">CONTACT</p>
+              <h2 id="contactHeading">連絡先</h2>
+              <p class="contact-note" id="contactNote">
+                GitHub や職務経歴書など、採用担当者が確認しやすいリンクをまとめています。
+              </p>
+            </div>
+
+            <div class="contact-actions">
+              <a class="button" id="contactMail" href="#">メールで連絡</a>
+              <div class="social-list" id="contactLinks">
+                <a href="https://github.com/nsuzuki7713" target="_blank" rel="noreferrer">GitHub</a>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>
+          <span id="footerName">Yoshimura Takuya</span>
+          <span>·</span>
+          <span id="footerRole">Infrastructure Engineer Portfolio</span>
+        </p>
+      </footer>
+    </div>
+
+    <script src="./site-data.js"></script>
+    <script src="./script.js"></script>
+  </body>
+</html>
