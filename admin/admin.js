@@ -1,10 +1,14 @@
 (() => {
   const STORAGE_KEY = window.PORTFOLIO_STORAGE_KEY || "portfolio-site.admin-data";
   const LAST_SAVED_KEY = `${STORAGE_KEY}.last-saved-at`;
+  const MAX_HERO_IMAGE_FILE_SIZE = 2 * 1024 * 1024;
   const mergePortfolioData =
     window.mergePortfolioData || ((baseValue, overrideValue) => overrideValue ?? baseValue);
-  const defaultData = deepClone(window.defaultPortfolioData || {});
-  let state = deepClone(mergePortfolioData(defaultData, window.portfolioData || defaultData));
+  const normalizePortfolioData = window.normalizePortfolioData || ((value) => value);
+  const defaultData = normalizePortfolioData(deepClone(window.defaultPortfolioData || {}));
+  let state = deepClone(
+    normalizePortfolioData(mergePortfolioData(defaultData, window.portfolioData || defaultData))
+  );
   let isDirty = false;
 
   const refs = {
@@ -131,6 +135,21 @@
     }).format(date);
   }
 
+  function initialsFromName(name) {
+    return String(name || "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+
+  function isDataImageUrl(value) {
+    return /^data:image\//.test(String(value || ""));
+  }
+
   function textField(label, path, options = {}) {
     const wrapper = createElement("div", {
       className: `field${options.fullWidth ? " field-full" : ""}`
@@ -158,9 +177,208 @@
     return wrapper;
   }
 
+  function createHeroImageEditor() {
+    const wrapper = createElement("section", { className: "field field-full image-field" });
+    const title = createElement("label", { text: "Hero 画像" });
+    const description = createElement("p", {
+      className: "field-help",
+      text: "URL 指定か画像アップロードで、ヒーロー右側にプロフィール写真やイラストを表示できます。"
+    });
+    const shell = createElement("div", { className: "image-field-shell" });
+    const previewCard = createElement("div", { className: "image-preview-card" });
+    const previewImage = createElement("img", { className: "image-preview-media" });
+    const previewPlaceholder = createElement("div", { className: "image-preview-placeholder" });
+    const previewMark = createElement("span", { className: "image-preview-mark" });
+    const previewCopy = createElement("div", { className: "image-preview-copy" });
+    const previewSource = createElement("p", { className: "image-source-note" });
+    const controls = createElement("div", { className: "image-field-controls" });
+    const uploadInput = createElement("input", { type: "file" });
+
+    uploadInput.accept = "image/*";
+    uploadInput.hidden = true;
+
+    previewCopy.appendChild(createElement("strong", { text: "Profile Visual" }));
+    previewCopy.appendChild(
+      createElement("p", { text: "未設定時はプレースホルダーを表示します。" })
+    );
+    previewPlaceholder.appendChild(previewMark);
+    previewPlaceholder.appendChild(previewCopy);
+    previewCard.appendChild(previewImage);
+    previewCard.appendChild(previewPlaceholder);
+
+    const urlField = createElement("div", { className: "field" });
+    urlField.appendChild(createElement("label", { text: "画像 URL" }));
+    const urlInput = createElement("input", {
+      type: "url",
+      placeholder: "https://example.com/profile-image.jpg",
+      value: isDataImageUrl(getAtPath(state, "profile.heroImageSrc"))
+        ? ""
+        : getAtPath(state, "profile.heroImageSrc") || ""
+    });
+    urlField.appendChild(urlInput);
+    urlField.appendChild(
+      createElement("p", {
+        className: "field-help",
+        text: "外部画像 URL を使う場合に入力します。アップロード画像を使用中のときは空欄のままで構いません。"
+      })
+    );
+
+    const altField = createElement("div", { className: "field" });
+    altField.appendChild(createElement("label", { text: "代替テキスト" }));
+    const altInput = createElement("input", {
+      type: "text",
+      placeholder: "例: Yoshimura Takuya のプロフィール写真",
+      value: getAtPath(state, "profile.heroImageAlt") || ""
+    });
+    altField.appendChild(altInput);
+    altField.appendChild(
+      createElement("p", {
+        className: "field-help",
+        text: "スクリーンリーダー向けの説明です。"
+      })
+    );
+
+    const actions = createElement("div", { className: "image-field-actions" });
+    const uploadButton = createElement("button", {
+      className: "button button-secondary",
+      type: "button",
+      text: "画像を選択"
+    });
+    const clearButton = createElement("button", {
+      className: "button button-ghost",
+      type: "button",
+      text: "画像をクリア"
+    });
+
+    const updatePreview = () => {
+      const currentName = getAtPath(state, "profile.shortName") || initialsFromName(getAtPath(state, "profile.name"));
+      const imageSrc = getAtPath(state, "profile.heroImageSrc") || "";
+      const imageAlt = getAtPath(state, "profile.heroImageAlt") || "";
+
+      previewMark.textContent = currentName || "NS";
+
+      if (imageSrc) {
+        previewCard.classList.add("has-image");
+        previewImage.hidden = false;
+        previewImage.src = imageSrc;
+        previewImage.alt = imageAlt || `${getAtPath(state, "profile.name") || "Profile"} image`;
+        previewPlaceholder.hidden = true;
+        previewSource.textContent = isDataImageUrl(imageSrc)
+          ? "現在: アップロード済み画像を使用中"
+          : "現在: URL 画像を使用中";
+        return;
+      }
+
+      previewCard.classList.remove("has-image");
+      previewImage.hidden = true;
+      previewImage.removeAttribute("src");
+      previewImage.alt = "";
+      previewPlaceholder.hidden = false;
+      previewSource.textContent = "現在: 画像は未設定です";
+    };
+
+    previewImage.addEventListener("error", () => {
+      previewCard.classList.remove("has-image");
+      previewImage.hidden = true;
+      previewImage.removeAttribute("src");
+      previewPlaceholder.hidden = false;
+      previewSource.textContent = "画像を読み込めませんでした。URL またはファイルを確認してください。";
+      setStatus("ヒーロー画像を読み込めませんでした。URL またはファイルを確認してください。", "warning");
+    });
+
+    urlInput.addEventListener("input", () => {
+      const nextValue = urlInput.value.trim();
+      setAtPath(state, "profile.heroImageSrc", nextValue);
+      markDirty("ヒーロー画像 URL を更新しました。保存すると反映されます。");
+      updatePreview();
+    });
+
+    altInput.addEventListener("input", () => {
+      setAtPath(state, "profile.heroImageAlt", altInput.value.trim());
+      markDirty();
+      updatePreview();
+    });
+
+    uploadButton.addEventListener("click", () => uploadInput.click());
+
+    clearButton.addEventListener("click", () => {
+      setAtPath(state, "profile.heroImageSrc", "");
+      urlInput.value = "";
+      markDirty("ヒーロー画像をクリアしました。保存すると反映されます。");
+      updatePreview();
+    });
+
+    uploadInput.addEventListener("change", (event) => {
+      const [file] = event.target.files || [];
+
+      if (!file) {
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        setStatus("画像ファイルを選択してください。", "warning");
+        event.target.value = "";
+        return;
+      }
+
+      if (file.size > MAX_HERO_IMAGE_FILE_SIZE) {
+        setStatus("画像サイズが大きすぎます。2MB 以下のファイルを選択してください。", "warning");
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.addEventListener("load", () => {
+        const result = String(reader.result || "");
+
+        if (!result) {
+          setStatus("画像の読み込みに失敗しました。", "warning");
+          return;
+        }
+
+        setAtPath(state, "profile.heroImageSrc", result);
+
+        if (!altInput.value.trim()) {
+          const defaultAlt = `${getAtPath(state, "profile.name") || "Profile"} image`;
+          altInput.value = defaultAlt;
+          setAtPath(state, "profile.heroImageAlt", defaultAlt);
+        }
+
+        urlInput.value = "";
+        markDirty("ヒーロー画像を追加しました。保存すると反映されます。");
+        updatePreview();
+      });
+
+      reader.readAsDataURL(file);
+      event.target.value = "";
+    });
+
+    actions.appendChild(uploadButton);
+    actions.appendChild(clearButton);
+    actions.appendChild(uploadInput);
+
+    controls.appendChild(urlField);
+    controls.appendChild(altField);
+    controls.appendChild(actions);
+    controls.appendChild(previewSource);
+
+    shell.appendChild(previewCard);
+    shell.appendChild(controls);
+
+    wrapper.appendChild(title);
+    wrapper.appendChild(description);
+    wrapper.appendChild(shell);
+
+    updatePreview();
+
+    return wrapper;
+  }
+
   function createSection(title, description) {
     const section = createElement("section", { className: "admin-section" });
     const header = createElement("div", { className: "section-header" });
+    const content = createElement("div", { className: "admin-section-content" });
     header.appendChild(createElement("p", { className: "section-eyebrow", text: "Editor" }));
     header.appendChild(createElement("h2", { text: title }));
 
@@ -169,6 +387,8 @@
     }
 
     section.appendChild(header);
+    section.appendChild(content);
+    section.content = content;
     return section;
   }
 
@@ -278,7 +498,7 @@
     });
 
     wrapper.appendChild(list);
-    section.appendChild(wrapper);
+    (section.content || section).appendChild(wrapper);
   }
 
   function renderBasicSection() {
@@ -302,7 +522,8 @@
       })
     );
 
-    section.appendChild(grid);
+    section.content.appendChild(grid);
+    section.content.appendChild(createHeroImageEditor());
 
     addCollection(section, {
       title: "Hero ハイライト",
@@ -326,7 +547,7 @@
   }
 
   function renderProfileSection() {
-    const section = createSection("プロフィール", "本文や資格、経歴セクションを編集します。");
+    const section = createSection("プロフィール", "本文、Focus Areas、資格欄を編集します。");
     const grid = createFieldGrid();
 
     grid.appendChild(textField("見出し", "profileSection.heading"));
@@ -355,39 +576,57 @@
         help: "1 行 1 項目で入力します。"
       })
     );
-    grid.appendChild(textField("Career 見出し", "profileSection.timelineHeading"));
-    grid.appendChild(textField("Career 概要", "profileSection.timelineIntro", { multiline: true, rows: 4 }));
 
-    section.appendChild(grid);
+    section.content.appendChild(grid);
+
+    return section;
+  }
+
+  function renderCareerSection() {
+    const section = createSection(
+      "在籍歴",
+      "会社、学校などの在籍先を CAREER セクションに表示するための項目です。"
+    );
+    const grid = createFieldGrid();
+    grid.appendChild(textField("見出し", "careerSection.heading"));
+    grid.appendChild(textField("概要文", "careerSection.intro", { multiline: true, rows: 4 }));
+    section.content.appendChild(grid);
 
     addCollection(section, {
-      title: "Career 項目",
-      description: "タイムラインに表示する経歴です。",
-      addLabel: "経歴追加",
-      itemTitle: (item, index) => item.title || `経歴 ${index + 1}`,
-      getItems: () => state.profileSection.timeline,
+      title: "在籍先一覧",
+      description: "勤務先や学校など、在籍した先を時系列で管理します。",
+      addLabel: "在籍先追加",
+      itemTitle: (item, index) => item.organization || item.title || `在籍先 ${index + 1}`,
+      getItems: () => state.careerSection.items,
       setItems: (items) => {
-        state.profileSection.timeline = items;
+        state.careerSection.items = items;
       },
       createItem: () => ({
         period: "",
+        category: "",
         organization: "",
         title: "",
         description: "",
         highlights: ""
       }),
       renderItem: (card, item) => {
-        const grid = createFieldGrid();
-        bindObjectField(grid, item, "period", "期間");
-        bindObjectField(grid, item, "organization", "所属");
-        bindObjectField(grid, item, "title", "タイトル");
-        bindObjectField(grid, item, "description", "説明", { multiline: true, rows: 4 });
-        bindObjectField(grid, item, "highlights", "箇条書き", {
+        const careerGrid = createFieldGrid();
+        bindObjectField(careerGrid, item, "period", "期間");
+        bindObjectField(careerGrid, item, "category", "区分", {
+          placeholder: "例: 勤務先 / 学校"
+        });
+        bindObjectField(careerGrid, item, "organization", "在籍先名");
+        bindObjectField(careerGrid, item, "title", "所属 / 役職 / 学科");
+        bindObjectField(careerGrid, item, "description", "在籍時の概要", {
+          multiline: true,
+          rows: 4
+        });
+        bindObjectField(careerGrid, item, "highlights", "主な内容", {
           multiline: true,
           rows: 6,
           help: "1 行 1 項目で入力します。"
         });
-        card.appendChild(grid);
+        card.appendChild(careerGrid);
       }
     });
 
@@ -399,7 +638,7 @@
     const grid = createFieldGrid();
     grid.appendChild(textField("見出し", "skillsSection.heading"));
     grid.appendChild(textField("概要文", "skillsSection.intro", { multiline: true, rows: 4 }));
-    section.appendChild(grid);
+    section.content.appendChild(grid);
 
     addCollection(section, {
       title: "スキルカテゴリ",
@@ -480,7 +719,7 @@
     const grid = createFieldGrid();
     grid.appendChild(textField("見出し", "worksSection.heading"));
     grid.appendChild(textField("概要文", "worksSection.intro", { multiline: true, rows: 4 }));
-    section.appendChild(grid);
+    section.content.appendChild(grid);
 
     addCollection(section, {
       title: "実績一覧",
@@ -535,7 +774,7 @@
     const grid = createFieldGrid();
     grid.appendChild(textField("見出し", "personalSection.heading"));
     grid.appendChild(textField("概要文", "personalSection.intro", { multiline: true, rows: 4 }));
-    section.appendChild(grid);
+    section.content.appendChild(grid);
 
     addCollection(section, {
       title: "個人活動一覧",
@@ -582,7 +821,7 @@
     grid.appendChild(textField("概要文", "contact.note", { multiline: true, rows: 4 }));
     grid.appendChild(textField("メールアドレス", "contact.email"));
     grid.appendChild(textField("フッター文言", "footerRole"));
-    section.appendChild(grid);
+    section.content.appendChild(grid);
 
     addCollection(section, {
       title: "リンク一覧",
@@ -609,6 +848,7 @@
     const fragment = document.createDocumentFragment();
     fragment.appendChild(renderBasicSection());
     fragment.appendChild(renderProfileSection());
+    fragment.appendChild(renderCareerSection());
     fragment.appendChild(renderSkillsSection());
     fragment.appendChild(renderWorksSection());
     fragment.appendChild(renderPersonalSection());
@@ -678,7 +918,7 @@
           throw new Error("Invalid JSON shape.");
         }
 
-        state = deepClone(mergePortfolioData(defaultData, parsed));
+        state = deepClone(normalizePortfolioData(mergePortfolioData(defaultData, parsed), parsed));
         markDirty("JSON を読み込みました。保存すると反映されます。");
         render();
       } catch (error) {

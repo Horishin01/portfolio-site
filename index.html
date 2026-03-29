@@ -32,6 +32,7 @@
 
         <nav class="site-nav" aria-label="グローバルナビゲーション">
           <a href="#profile">PROFILE</a>
+          <a href="#career">CAREER</a>
           <a href="#skills">SKILL</a>
           <a href="#works">WORKS</a>
           <a href="#personal">PERSONAL</a>
@@ -40,7 +41,7 @@
       </header>
 
       <main id="top">
-        <section class="hero section">
+        <section class="hero section" id="heroSection">
           <div class="hero-copy reveal">
             <p class="eyebrow" id="heroEyebrow">Infrastructure Engineer</p>
             <h1 id="heroTitle">Naoto Suzuki's portfolio</h1>
@@ -56,15 +57,28 @@
             </ul>
           </div>
 
-          <aside class="hero-panel reveal" aria-label="担当領域の概要">
-            <p class="panel-kicker">Core Focus</p>
-            <div class="hero-highlight-list" id="heroHighlights">
-              <article>
-                <span>Primary Cloud</span>
-                <strong>AWS / EC2 / RDS / Route 53</strong>
-              </article>
-            </div>
-          </aside>
+          <div class="hero-side">
+            <figure class="hero-visual reveal" id="heroVisualCard" aria-label="プロフィールイメージ">
+              <img id="heroImage" alt="" hidden />
+              <div class="hero-visual-placeholder" id="heroImagePlaceholder" aria-hidden="true">
+                <span class="hero-visual-mark" id="heroImageFallbackMark">NS</span>
+                <div class="hero-visual-copy">
+                  <strong>Image / Illustration</strong>
+                  <p>プロフィール写真やイラストを表示できます。</p>
+                </div>
+              </div>
+            </figure>
+
+            <aside class="hero-panel reveal" aria-label="担当領域の概要">
+              <p class="panel-kicker">Core Focus</p>
+              <div class="hero-highlight-list" id="heroHighlights">
+                <article>
+                  <span>Primary Cloud</span>
+                  <strong>AWS / EC2 / RDS / Route 53</strong>
+                </article>
+              </div>
+            </aside>
+          </div>
         </section>
 
         <section class="section" id="profile">
@@ -103,27 +117,29 @@
               </div>
             </article>
           </div>
+        </section>
 
-          <div class="timeline-block reveal">
-            <div class="timeline-heading">
-              <h3 id="timelineHeading">Career</h3>
-              <p class="section-intro" id="timelineIntro">
-                担当領域がどのように広がってきたかを、実務の流れに沿って整理しています。
-              </p>
-            </div>
+        <section class="section" id="career">
+          <div class="section-heading reveal">
+            <p class="eyebrow">CAREER</p>
+            <h2 id="careerHeading">在籍歴</h2>
+            <p class="section-intro" id="careerIntro">
+              在籍した会社や学校などを中心に、どの期間にどこで何をしていたかが分かる形で整理しています。
+            </p>
+          </div>
 
-            <div class="timeline" id="careerTimeline">
-              <article class="timeline-item">
-                <div class="timeline-side">
-                  <span class="timeline-period">現在</span>
-                  <p class="timeline-org">クラウド / インフラ領域</p>
-                </div>
-                <div class="timeline-content">
-                  <h4>設計・構築・運用改善</h4>
-                  <p>AWS を中心に、設計、構築、IaC、監視、障害対応、運用改善を横断して担当する想定です。</p>
-                </div>
-              </article>
-            </div>
+          <div class="timeline" id="careerTimeline">
+            <article class="timeline-item reveal">
+              <div class="timeline-side">
+                <span class="timeline-period">2024 - 現在</span>
+                <span class="timeline-kind">勤務先</span>
+              </div>
+              <div class="timeline-content">
+                <h4>現在の勤務先</h4>
+                <p class="timeline-role">インフラエンジニア</p>
+                <p>AWS を中心としたインフラ設計、構築、運用改善に継続して携わっている想定のダミーテキストです。</p>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -203,7 +219,7 @@
             <div class="contact-actions">
               <a class="button" id="contactMail" href="#">メールで連絡</a>
               <div class="social-list" id="contactLinks">
-                <a href="https://github.com/nsuzuki7713" target="_blank" rel="noreferrer">GitHub</a>
+                <a href="https://github.com/horishin06" target="_blank" rel="noreferrer">GitHub</a>
               </div>
             </div>
           </div>

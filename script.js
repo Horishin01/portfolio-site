@@ -6,6 +6,7 @@ if (!data) {
 
 const profileData = (data && data.profile) || {};
 const profileSectionData = (data && data.profileSection) || {};
+const careerSectionData = (data && data.careerSection) || {};
 const skillsSectionData = (data && data.skillsSection) || {};
 const worksSectionData = (data && data.worksSection) || {};
 const personalSectionData = (data && data.personalSection) || {};
@@ -136,8 +137,8 @@ text("profileIntro", profileSectionData.intro);
 text("profileLead", profileSectionData.lead);
 text("focusHeading", profileSectionData.focusHeading);
 text("certificationsHeading", profileSectionData.certificationsHeading);
-text("timelineHeading", profileSectionData.timelineHeading);
-text("timelineIntro", profileSectionData.timelineIntro);
+text("careerHeading", careerSectionData.heading);
+text("careerIntro", careerSectionData.intro);
 text("skillsHeading", skillsSectionData.heading);
 text("skillsIntro", skillsSectionData.intro);
 text("worksHeading", worksSectionData.heading);
@@ -148,6 +149,49 @@ text("contactHeading", contactData.heading);
 text("contactNote", contactData.note);
 text("footerName", profileData.name);
 text("footerRole", data && data.footerRole);
+text("heroImageFallbackMark", profileData.shortName || initialsFromName(profileData.name));
+
+const heroSection = document.getElementById("heroSection");
+const heroVisualCard = document.getElementById("heroVisualCard");
+const heroImage = document.getElementById("heroImage");
+const heroImagePlaceholder = document.getElementById("heroImagePlaceholder");
+
+const showHeroImageFallback = () => {
+  if (heroSection) {
+    heroSection.classList.remove("has-hero-image");
+  }
+
+  if (heroVisualCard) {
+    heroVisualCard.classList.remove("has-image");
+  }
+
+  if (heroImage) {
+    heroImage.hidden = true;
+    heroImage.removeAttribute("src");
+  }
+
+  if (heroImagePlaceholder) {
+    heroImagePlaceholder.hidden = false;
+  }
+};
+
+if (heroImage) {
+  heroImage.addEventListener("error", showHeroImageFallback);
+}
+
+if (profileData.heroImageSrc && heroImage && heroVisualCard && heroImagePlaceholder) {
+  if (heroSection) {
+    heroSection.classList.add("has-hero-image");
+  }
+
+  heroVisualCard.classList.add("has-image");
+  heroImage.hidden = false;
+  heroImagePlaceholder.hidden = true;
+  heroImage.alt = profileData.heroImageAlt || `${profileData.name || "Profile"} image`;
+  heroImage.src = profileData.heroImageSrc;
+} else {
+  showHeroImageFallback();
+}
 
 const heroTags = document.getElementById("heroTags");
 if (heroTags) {
@@ -203,26 +247,47 @@ if (certificationList) {
 const careerTimeline = document.getElementById("careerTimeline");
 if (careerTimeline) {
   clearChildren(careerTimeline);
-  (profileSectionData.timeline || []).forEach((entry) => {
+  (careerSectionData.items || []).forEach((entry) => {
     const article = document.createElement("article");
-    article.className = "timeline-item";
+    article.className = "timeline-item reveal";
 
     const side = document.createElement("div");
     side.className = "timeline-side";
-    side.innerHTML = `<span class="timeline-period">${entry.period}</span><p class="timeline-org">${entry.organization}</p>`;
+    const period = document.createElement("span");
+    period.className = "timeline-period";
+    period.textContent = entry.period || "";
+    side.appendChild(period);
+
+    if (entry.category) {
+      const category = document.createElement("span");
+      category.className = "timeline-kind";
+      category.textContent = entry.category;
+      side.appendChild(category);
+    }
 
     const content = document.createElement("div");
     content.className = "timeline-content";
 
-    const title = document.createElement("h4");
-    title.textContent = entry.title;
+    const organization = document.createElement("h4");
+    organization.textContent = entry.organization || "";
+    content.appendChild(organization);
 
-    const description = document.createElement("p");
-    description.textContent = entry.description;
+    if (entry.title) {
+      const title = document.createElement("p");
+      title.className = "timeline-role";
+      title.textContent = entry.title;
+      content.appendChild(title);
+    }
 
-    content.appendChild(title);
-    content.appendChild(description);
-    content.appendChild(createList(entry.highlights, "timeline-highlights"));
+    if (entry.description) {
+      const description = document.createElement("p");
+      description.textContent = entry.description;
+      content.appendChild(description);
+    }
+
+    if (normalizeListItems(entry.highlights).length > 0) {
+      content.appendChild(createList(entry.highlights, "timeline-highlights"));
+    }
 
     article.appendChild(side);
     article.appendChild(content);

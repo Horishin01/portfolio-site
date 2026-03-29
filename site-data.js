@@ -9,9 +9,9 @@
 
 const OWNER = {
   name: "Yoshimura Takuya",
-  shortName: "NS",
+  shortName: "YT",
   role: "Infrastructure Engineer",
-  github: "https://github.com/nsuzuki7713",
+  github: "https://github.com/horishin06",
   email: ""
 };
 
@@ -28,6 +28,8 @@ const defaultPortfolioData = {
     role: OWNER.role,
     heroEyebrow: OWNER.role,
     heroTitle: `${OWNER.name}'s portfolio`,
+    heroImageSrc: "",
+    heroImageAlt: "",
     summary:
       "AWS を中心に、設計・構築・運用改善・自動化までを一気通貫で整理したインフラエンジニア向けポートフォリオです。開発経験を土台に、開発チームが動きやすい基盤づくりを意識しています。",
     tags: `
@@ -69,33 +71,50 @@ const defaultPortfolioData = {
       基本情報技術者
       Oracle Bronze
       Java SE 8 Silver
-    `,
-    timelineHeading: "Career",
-    timelineIntro:
-      "担当領域がどのように広がってきたかを、実務の流れに沿って整理しています。",
-    timeline: [
+    `
+  },
+  careerSection: {
+    heading: "在籍歴",
+    intro:
+      "在籍した会社や学校などを中心に、どの期間にどこで何をしていたかが分かる形で整理しています。",
+    items: [
       {
-        period: "現在",
-        organization: "クラウド / インフラ領域",
-        title: "設計・構築・運用改善",
+        period: "2024 - 現在",
+        category: "勤務先",
+        organization: "現在の勤務先",
+        title: "インフラエンジニア",
         description:
-          "AWS を中心に、設計、構築、IaC、監視、障害対応、運用改善を横断して担当する想定です。",
+          "AWS を中心としたインフラ設計、構築、運用改善に継続して携わっている想定のダミーテキストです。",
         highlights: `
-          構成検討から運用引き継ぎまで一連で対応
-          監視項目やアラート運用の見直しを実施
-          変更作業を IaC と手順書で標準化
+          AWS 環境の設計、構築、運用改善を担当
+          監視やアラート、手順書整備を継続的に実施
+          Terraform やスクリプトを使った標準化を推進
         `
       },
       {
-        period: "バックグラウンド",
-        organization: "Web / アプリ開発領域",
-        title: "開発経験を土台にしたインフラ理解",
+        period: "2021 - 2024",
+        category: "勤務先",
+        organization: "前職の勤務先",
+        title: "運用 / 開発担当",
         description:
-          "アプリケーション側の都合を理解したうえで、開発が進めやすい基盤側の設計に活かしています。",
+          "アプリケーション運用や改修に携わり、業務システムの保守や改善に関わっていた想定のダミーテキストです。",
         highlights: `
-          問い合わせ対応や改修経験から運用目線を獲得
-          API / DB / デプロイの接点を踏まえた構成検討
-          インフラとアプリの境界で起きる課題を把握しやすい
+          問い合わせ対応や改修を通じて業務運用の流れを把握
+          アプリとインフラの接点を意識した改善を経験
+          現在のインフラ領域へつながる基礎を形成
+        `
+      },
+      {
+        period: "2018 - 2021",
+        category: "学校",
+        organization: "情報系の学校名",
+        title: "情報システム学科",
+        description:
+          "IT の基礎、ネットワーク、サーバー、プログラミングを学び、現在の実務につながる土台を作った想定のダミーテキストです。",
+        highlights: `
+          基本情報技術やネットワークの基礎を学習
+          Linux やデータベースを使った演習に取り組む
+          卒業制作やチーム課題でシステム構築を経験
         `
       }
     ]
@@ -323,6 +342,36 @@ const mergePortfolioData = (baseValue, overrideValue) => {
   return overrideValue ?? baseValue;
 };
 
+const normalizePortfolioData = (value, rawOverride = null) => {
+  const normalized = deepClone(value || {});
+  const overrideObject = isPlainObject(rawOverride) ? rawOverride : null;
+  const legacyProfileSection =
+    overrideObject && isPlainObject(overrideObject.profileSection) ? overrideObject.profileSection : null;
+  const hasCareerSectionOverride =
+    Boolean(overrideObject) && Object.prototype.hasOwnProperty.call(overrideObject, "careerSection");
+  const legacyTimeline = Array.isArray(legacyProfileSection && legacyProfileSection.timeline)
+    ? legacyProfileSection.timeline
+    : [];
+
+  if (!isPlainObject(normalized.careerSection)) {
+    normalized.careerSection = {};
+  }
+
+  if (!Array.isArray(normalized.careerSection.items)) {
+    normalized.careerSection.items = [];
+  }
+
+  if (!hasCareerSectionOverride && legacyTimeline.length > 0) {
+    normalized.careerSection.items = deepClone(legacyTimeline);
+
+    if (!normalized.careerSection.intro && legacyProfileSection && legacyProfileSection.timelineIntro) {
+      normalized.careerSection.intro = legacyProfileSection.timelineIntro;
+    }
+  }
+
+  return normalized;
+};
+
 const readStoredPortfolioData = () => {
   try {
     const raw = window.localStorage.getItem(PORTFOLIO_STORAGE_KEY);
@@ -337,7 +386,7 @@ const readStoredPortfolioData = () => {
       return null;
     }
 
-    return mergePortfolioData(defaultPortfolioData, parsed);
+    return normalizePortfolioData(mergePortfolioData(defaultPortfolioData, parsed), parsed);
   } catch (error) {
     console.warn("Failed to read stored portfolio data.", error);
     return null;
@@ -347,4 +396,5 @@ const readStoredPortfolioData = () => {
 window.PORTFOLIO_STORAGE_KEY = PORTFOLIO_STORAGE_KEY;
 window.defaultPortfolioData = defaultPortfolioData;
 window.mergePortfolioData = mergePortfolioData;
-window.portfolioData = readStoredPortfolioData() || defaultPortfolioData;
+window.normalizePortfolioData = normalizePortfolioData;
+window.portfolioData = readStoredPortfolioData() || normalizePortfolioData(defaultPortfolioData);
