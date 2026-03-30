@@ -1,0 +1,122 @@
+@model PortfolioEditorViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Portfolio Admin Editor";
+
+    var tone = TempData["StatusTone"] as string;
+    var tempMessage = TempData["StatusMessage"] as string;
+    var hasErrors = !ViewData.ModelState.IsValid;
+    var validationMessage = ViewData.ModelState.Values
+        .SelectMany(value => value.Errors)
+        .FirstOrDefault()
+        ?.ErrorMessage;
+    var statusMessage = validationMessage ?? tempMessage ?? "JSON を編集して保存してください。";
+    var statusClass = hasErrors
+        ? "is-error"
+        : tone is "success" ? "is-success"
+        : tone is "warning" ? "is-warning"
+        : string.Empty;
+}
+<div class="admin-shell is-visible" id="adminShell">
+  <header class="admin-header">
+    <div>
+      <p class="admin-eyebrow">Portfolio Admin</p>
+      <h1>管理画面</h1>
+      <p class="admin-note">
+        API は使わず、ASP.NET Core MVC のフォーム送信で JSON ドキュメントを更新します。
+      </p>
+    </div>
+
+    <div class="admin-header-actions">
+      <button class="button button-save" form="editorForm" type="submit">保存</button>
+      <a class="button button-ghost" asp-action="Index">ポータルへ戻る</a>
+      <form asp-action="Logout" method="post" class="inline-form">
+        <button class="button button-ghost" type="submit">ログアウト</button>
+      </form>
+      <a class="button button-secondary" asp-controller="Home" asp-action="Index">サイトを見る</a>
+    </div>
+  </header>
+
+  <section class="admin-toolbar">
+    <div class="toolbar-group">
+      <a class="button button-secondary" asp-action="Export">JSON 出力</a>
+    </div>
+    <div class="toolbar-group">
+      <form asp-action="Reset" method="post" class="inline-form" data-confirm="初期データへ戻します。現在の保存内容は上書きされます。">
+        <button class="button button-ghost" type="submit">初期値に戻す</button>
+      </form>
+    </div>
+  </section>
+
+  <p class="status-message @statusClass">@statusMessage</p>
+
+  <main class="admin-layout">
+    <section class="admin-section">
+      <div class="section-header">
+        <p class="section-eyebrow">Summary</p>
+        <h2>現在の情報</h2>
+        <p class="section-description">
+          保存対象のタイトルと概要です。最終更新は UTC 表記です。
+        </p>
+      </div>
+      <div class="admin-section-content">
+        <div class="field-grid">
+          <div class="field">
+            <label>Site Title</label>
+            <input value="@Model.SiteTitle" readonly />
+          </div>
+          <div class="field">
+            <label>Updated At</label>
+            <input value="@Model.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")" readonly />
+          </div>
+          <div class="field field-full">
+            <label>Meta Description</label>
+            <textarea readonly>@Model.MetaDescription</textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-header">
+        <p class="section-eyebrow">Editor</p>
+        <h2>Portfolio JSON</h2>
+        <p class="section-description">
+          `portfolio-seed.json` と同じ構造の JSON をそのまま編集します。
+        </p>
+      </div>
+      <div class="admin-section-content">
+        <form id="editorForm" asp-action="Edit" method="post">
+          <div class="field-grid is-single">
+            <div class="field field-full">
+              <label asp-for="JsonContent"></label>
+              <textarea asp-for="JsonContent" class="json-editor"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-header">
+        <p class="section-eyebrow">Import</p>
+        <h2>JSON 読み込み</h2>
+        <p class="section-description">
+          手元の JSON をそのまま保存データへ反映します。
+        </p>
+      </div>
+      <div class="admin-section-content">
+        <form asp-action="Import" method="post" enctype="multipart/form-data">
+          <div class="field-grid is-single">
+            <div class="field field-full">
+              <label for="uploadedFile">JSON ファイル</label>
+              <input id="uploadedFile" name="uploadedFile" type="file" accept="application/json" required />
+              <p class="field-help">構造が不正な場合は保存されません。</p>
+            </div>
+          </div>
+          <button class="button button-secondary" type="submit">JSON を読み込む</button>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>

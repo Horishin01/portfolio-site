@@ -1,0 +1,48 @@
+@model AdminLoginViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Portfolio Admin Login";
+    var hasErrors = !ViewData.ModelState.IsValid;
+    var message = hasErrors
+        ? ViewData.ModelState.Values.SelectMany(value => value.Errors).FirstOrDefault()?.ErrorMessage ?? "入力内容を確認してください。"
+        : "ID とパスワードを入力してください。";
+}
+<div class="auth-shell" id="authShell">
+  <section class="auth-card">
+    <p class="admin-eyebrow">Portfolio Admin</p>
+    <h1>ログイン</h1>
+    <p class="admin-note">
+      管理画面は ASP.NET Core MVC のコントローラー経由で認証し、保存内容は MySQL に反映します。
+    </p>
+
+    <form class="auth-form" asp-action="Login" method="post" novalidate>
+      <input asp-for="ReturnUrl" type="hidden" />
+
+      <div class="field">
+        <label asp-for="LoginId"></label>
+        <input asp-for="LoginId" autocomplete="username" />
+      </div>
+
+      <div class="field">
+        <label asp-for="Password"></label>
+        <div class="password-input-shell">
+          <input asp-for="Password" autocomplete="current-password" />
+          <button
+            class="password-visibility-button"
+            type="button"
+            data-password-toggle
+            data-password-target="Password"
+            aria-label="パスワードを表示"
+            aria-pressed="false"
+            title="パスワードを表示・非表示"
+          >
+            <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <p class="status-message @(hasErrors ? "is-error" : string.Empty)">@message</p>
+      <button class="button" type="submit">ログイン</button>
+    </form>
+  </section>
+</div>

@@ -1,0 +1,367 @@
+@model PortfolioDocument
+@{
+    ViewData["Title"] = Model.SiteTitle;
+    ViewData["MetaDescription"] = Model.MetaDescription;
+
+    static IEnumerable<string> SplitLines(string? value)
+    {
+        return (value ?? string.Empty)
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.TrimStart('-', '*', '+', ' '));
+    }
+
+    static IEnumerable<string> SplitParagraphs(string? value)
+    {
+        return (value ?? string.Empty)
+            .Split("\n\n", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Replace("\n", " ").Trim());
+    }
+
+    static string GetInitials(string? value)
+    {
+        return string.Concat(
+            (value ?? string.Empty)
+                .Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .Select(item => item[0])
+        ).ToUpperInvariant();
+    }
+
+    static bool IsExternalLink(string? href)
+    {
+        return !string.IsNullOrWhiteSpace(href)
+            && (href.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || href.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
+    }
+
+    var shortName = string.IsNullOrWhiteSpace(Model.Profile.ShortName)
+        ? GetInitials(Model.Profile.Name)
+        : Model.Profile.ShortName;
+    var footerRole = string.IsNullOrWhiteSpace(Model.FooterRole)
+        ? Model.Profile.Role
+        : Model.FooterRole;
+    var hasHeroImage = !string.IsNullOrWhiteSpace(Model.Profile.HeroImageSrc);
+}
+<div class="background-grid" aria-hidden="true"></div>
+<div class="background-orb background-orb-left" aria-hidden="true"></div>
+<div class="background-orb background-orb-right" aria-hidden="true"></div>
+
+<div class="page-shell">
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="ページ上部へ移動">
+      <span class="brand-mark">@shortName</span>
+      <span class="brand-copy">
+        <strong>@Model.Profile.Name</strong>
+        <small>@Model.Profile.Role</small>
+      </span>
+    </a>
+
+    <nav class="site-nav" aria-label="グローバルナビゲーション">
+      <a href="#profile">PROFILE</a>
+      <a href="#career">CAREER</a>
+      <a href="#skills">SKILL</a>
+      <a href="#works">WORKS</a>
+      <a href="#personal">PERSONAL</a>
+      <a href="#contact">CONTACT</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero section @(hasHeroImage ? "has-hero-image" : string.Empty)" id="heroSection">
+      <div class="hero-copy reveal">
+        <p class="eyebrow">@Model.Profile.HeroEyebrow</p>
+        <h1>@Model.Profile.HeroTitle</h1>
+        <p class="hero-summary">@Model.Profile.Summary</p>
+
+        <ul class="hero-tag-list" aria-label="主な技術">
+          @foreach (var tag in SplitLines(Model.Profile.Tags))
+          {
+              <li>@tag</li>
+          }
+        </ul>
+      </div>
+
+      <div class="hero-side">
+        <figure class="hero-visual reveal @(hasHeroImage ? "has-image" : string.Empty)" aria-label="プロフィールイメージ">
+          @if (hasHeroImage)
+          {
+              <img
+                class="image-preview-media"
+                src="@Model.Profile.HeroImageSrc"
+                alt="@(string.IsNullOrWhiteSpace(Model.Profile.HeroImageAlt) ? $"{Model.Profile.Name} image" : Model.Profile.HeroImageAlt)"
+              />
+          }
+          else
+          {
+              <div class="hero-visual-placeholder" aria-hidden="true">
+                <span class="hero-visual-mark">@shortName</span>
+                <div class="hero-visual-copy">
+                  <strong>Image / Illustration</strong>
+                  <p>プロフィール写真やイラストを表示できます。</p>
+                </div>
+              </div>
+          }
+        </figure>
+
+        <aside class="hero-panel reveal" aria-label="担当領域の概要">
+          <p class="panel-kicker">Core Focus</p>
+          <div class="hero-highlight-list">
+            @foreach (var highlight in Model.Profile.Highlights)
+            {
+                <article>
+                  <span>@highlight.Label</span>
+                  <strong>@highlight.Value</strong>
+                </article>
+            }
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="profile">
+      <div class="section-heading reveal">
+        <p class="eyebrow">PROFILE</p>
+        <h2>@Model.ProfileSection.Heading</h2>
+        <p class="section-intro">@Model.ProfileSection.Intro</p>
+      </div>
+
+      <div class="profile-grid">
+        <article class="panel reveal">
+          <h3>Overview</h3>
+          <p class="lead-copy">@Model.ProfileSection.Lead</p>
+          <div class="body-copy">
+            @foreach (var paragraph in SplitParagraphs(Model.ProfileSection.Body))
+            {
+                <p>@paragraph</p>
+            }
+          </div>
+        </article>
+
+        <article class="panel panel-stack reveal">
+          <div>
+            <h3>@Model.ProfileSection.FocusHeading</h3>
+            <ul class="focus-list">
+              @foreach (var item in SplitLines(Model.ProfileSection.FocusItems))
+              {
+                  <li>@item</li>
+              }
+            </ul>
+          </div>
+
+          <div>
+            <h3>@Model.ProfileSection.CertificationsHeading</h3>
+            <ul class="chip-list">
+              @foreach (var item in SplitLines(Model.ProfileSection.Certifications))
+              {
+                  <li>@item</li>
+              }
+            </ul>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="career">
+      <div class="section-heading reveal">
+        <p class="eyebrow">CAREER</p>
+        <h2>@Model.CareerSection.Heading</h2>
+        <p class="section-intro">@Model.CareerSection.Intro</p>
+      </div>
+
+      <div class="timeline">
+        @foreach (var entry in Model.CareerSection.Items)
+        {
+            <article class="timeline-item reveal">
+              <div class="timeline-side">
+                <span class="timeline-period">@entry.Period</span>
+                @if (!string.IsNullOrWhiteSpace(entry.Category))
+                {
+                    <span class="timeline-kind">@entry.Category</span>
+                }
+              </div>
+              <div class="timeline-content">
+                <h4>@entry.Organization</h4>
+                @if (!string.IsNullOrWhiteSpace(entry.Title))
+                {
+                    <p class="timeline-role">@entry.Title</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(entry.Description))
+                {
+                    <p>@entry.Description</p>
+                }
+                @if (SplitLines(entry.Highlights).Any())
+                {
+                    <ul class="timeline-highlights">
+                      @foreach (var item in SplitLines(entry.Highlights))
+                      {
+                          <li>@item</li>
+                      }
+                    </ul>
+                }
+              </div>
+            </article>
+        }
+      </div>
+    </section>
+
+    <section class="section" id="skills">
+      <div class="section-heading reveal">
+        <p class="eyebrow">SKILL</p>
+        <h2>@Model.SkillsSection.Heading</h2>
+        <p class="section-intro">@Model.SkillsSection.Intro</p>
+      </div>
+
+      <div class="skills-stack">
+        @foreach (var category in Model.SkillsSection.Categories)
+        {
+            <article class="skill-card reveal">
+              <div class="skill-card-head">
+                <h3>@category.Title</h3>
+                <p>@category.Summary</p>
+              </div>
+
+              <div class="skill-table">
+                <div class="skill-table-row skill-table-head">
+                  <span>技術</span>
+                  <span>経験</span>
+                  <span>補足</span>
+                </div>
+                @foreach (var item in category.Items)
+                {
+                    <div class="skill-table-row">
+                      <strong>@item.Name</strong>
+                      <span class="skill-experience">@item.Experience</span>
+                      <p>@item.Note</p>
+                    </div>
+                }
+              </div>
+            </article>
+        }
+      </div>
+    </section>
+
+    <section class="section" id="works">
+      <div class="section-heading reveal">
+        <p class="eyebrow">WORKS</p>
+        <h2>@Model.WorksSection.Heading</h2>
+        <p class="section-intro">@Model.WorksSection.Intro</p>
+      </div>
+
+      <div class="works-list">
+        @foreach (var work in Model.WorksSection.Items)
+        {
+            <article class="work-card reveal">
+              <div class="work-summary">
+                <div class="work-meta">
+                  <span>@work.Type</span>
+                  <span>@work.Year</span>
+                </div>
+                <h3>@work.Title</h3>
+                <p class="work-role">@work.Role</p>
+                <p>@work.Summary</p>
+              </div>
+
+              <div class="work-detail">
+                <section class="work-block">
+                  <span class="work-block-title">担当内容</span>
+                  <ul class="bullet-list">
+                    @foreach (var item in SplitLines(work.Responsibilities))
+                    {
+                        <li>@item</li>
+                    }
+                  </ul>
+                </section>
+
+                <section class="work-block">
+                  <span class="work-block-title">成果</span>
+                  <ul class="bullet-list">
+                    @foreach (var item in SplitLines(work.Outcomes))
+                    {
+                        <li>@item</li>
+                    }
+                  </ul>
+                </section>
+
+                <section class="work-block">
+                  <span class="work-block-title">使用技術</span>
+                  <ul class="stack-list">
+                    @foreach (var item in SplitLines(work.Stack))
+                    {
+                        <li>@item</li>
+                    }
+                  </ul>
+                </section>
+              </div>
+            </article>
+        }
+      </div>
+    </section>
+
+    <section class="section" id="personal">
+      <div class="section-heading reveal">
+        <p class="eyebrow">PERSONAL</p>
+        <h2>@Model.PersonalSection.Heading</h2>
+        <p class="section-intro">@Model.PersonalSection.Intro</p>
+      </div>
+
+      <div class="personal-grid">
+        @foreach (var item in Model.PersonalSection.Items)
+        {
+            <article class="personal-card reveal">
+              <p class="personal-meta">@item.Category</p>
+              <h3>@item.Title</h3>
+              <p class="personal-summary">@item.Summary</p>
+              <ul class="bullet-list">
+                @foreach (var point in SplitLines(item.Points))
+                {
+                    <li>@point</li>
+                }
+              </ul>
+              <ul class="stack-list">
+                @foreach (var stackItem in SplitLines(item.Stack))
+                {
+                    <li>@stackItem</li>
+                }
+              </ul>
+            </article>
+        }
+      </div>
+    </section>
+
+    <section class="section" id="contact">
+      <div class="contact-panel reveal">
+        <div>
+          <p class="eyebrow">CONTACT</p>
+          <h2>@Model.Contact.Heading</h2>
+          <p class="contact-note">@Model.Contact.Note</p>
+        </div>
+
+        <div class="contact-actions">
+          @if (!string.IsNullOrWhiteSpace(Model.Contact.Email))
+          {
+              <a class="button" href="mailto:@Model.Contact.Email">@Model.Contact.Email</a>
+          }
+
+          <div class="social-list">
+            @foreach (var link in Model.Contact.Links)
+            {
+                <a
+                  href="@link.Href"
+                  target="@(IsExternalLink(link.Href) ? "_blank" : null)"
+                  rel="@(IsExternalLink(link.Href) ? "noreferrer" : null)"
+                >@link.Label</a>
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      <span>@Model.Profile.Name</span>
+      <span>·</span>
+      <span>@footerRole</span>
+    </p>
+  </footer>
+</div>

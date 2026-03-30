@@ -1,0 +1,66 @@
+@model AdminDashboardViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Portfolio Administrator Portal";
+}
+<div class="portal-transition-shell is-visible">
+  <section class="portal-transition-screen">
+    <div class="portal-hero">
+      <p class="admin-eyebrow">Administrator Portal</p>
+      <h1>Secure Control Center</h1>
+      <p class="admin-note">
+        認証済みセッションを確認しました。ここから JSON ベースの編集画面へ入り、ポートフォリオ本体を更新できます。
+      </p>
+    </div>
+
+    <div class="portal-overview-grid">
+      <article class="portal-card">
+        <span class="portal-card-label">User</span>
+        <strong>@Model.LoginId</strong>
+        <p>Cookie authentication</p>
+      </article>
+      <article class="portal-card">
+        <span class="portal-card-label">Storage</span>
+        <strong>MySQL + EF Core</strong>
+        <p>Controller と DbContext を通して保存します。</p>
+      </article>
+      <article class="portal-card">
+        <span class="portal-card-label">Current Site</span>
+        <strong>@Model.SiteTitle</strong>
+        <p>最終更新: @Model.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+      </article>
+    </div>
+
+    <div class="portal-status-panel" aria-label="初期化ステータス">
+      <div class="portal-status-item">
+        <span class="portal-status-dot"></span>
+        <div>
+          <strong>Authentication</strong>
+          <p>管理者ログインと Cookie 発行が完了しています。</p>
+        </div>
+      </div>
+      <div class="portal-status-item">
+        <span class="portal-status-dot"></span>
+        <div>
+          <strong>Rendering</strong>
+          <p>公開ページは Razor View でサーバー描画します。</p>
+        </div>
+      </div>
+      <div class="portal-status-item">
+        <span class="portal-status-dot"></span>
+        <div>
+          <strong>Persistence</strong>
+          <p>ポートフォリオ本体は 1 件の JSON ドキュメントとして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="portal-actions">
+      <a class="button" asp-action="Edit">管理画面を開く</a>
+      <a class="button button-secondary" asp-controller="Home" asp-action="Index">サイトを見る</a>
+      <form asp-action="Logout" method="post" class="inline-form">
+        <button class="button button-ghost" type="submit">ログアウト</button>
+      </form>
+    </div>
+  </section>
+</div>
