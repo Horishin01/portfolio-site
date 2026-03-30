@@ -1,4 +1,4 @@
-(() => {
+;(async () => {
   const refs = {
     loginForm: document.getElementById("loginForm"),
     loginButton: document.getElementById("loginButton"),
@@ -30,7 +30,7 @@
       : "fa-regular fa-eye-slash";
   }
 
-  function handleLoginAttempt() {
+  async function handleLoginAttempt() {
     const result = window.AdminAuth.validateCredentials(
       refs.loginId.value,
       refs.loginPassword.value
@@ -48,16 +48,32 @@
       return;
     }
 
-    window.AdminAuth.login();
-    window.location.replace("./portal.html");
+    refs.loginButton.disabled = true;
+    setLoginMessage("ログイン中です。", "warning");
+
+    try {
+      await window.AdminAuth.login(refs.loginId.value, refs.loginPassword.value);
+      window.location.replace("./portal.html");
+    } catch (error) {
+      const message =
+        (error && error.body && error.body.message) ||
+        "ログインに失敗しました。ID またはパスワードを確認してください。";
+
+      setLoginMessage(message, "error");
+      refs.loginPassword.value = "";
+      setPasswordVisibility(false);
+      refs.loginPassword.focus();
+    } finally {
+      refs.loginButton.disabled = false;
+    }
   }
 
-  if (!window.AdminAuth) {
+  if (!window.AdminAuth || !window.PortfolioDataSource) {
     setLoginMessage("認証モジュールの読み込みに失敗しました。", "error");
     return;
   }
 
-  if (window.AdminAuth.isAuthenticated()) {
+  if (await window.AdminAuth.isAuthenticated()) {
     window.location.replace("./portal.html");
     return;
   }
@@ -69,12 +85,12 @@
 
   refs.loginForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    handleLoginAttempt();
+    void handleLoginAttempt();
   });
 
   refs.loginButton.addEventListener("click", (event) => {
     event.preventDefault();
-    handleLoginAttempt();
+    void handleLoginAttempt();
   });
 
   setPasswordVisibility(false);

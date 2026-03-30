@@ -1,4 +1,18 @@
-const data = window.portfolioData;
+;(async () => {
+let data = window.portfolioData;
+
+if (window.loadPortfolioData) {
+  try {
+    const result = await window.loadPortfolioData({ scope: "public" });
+    data = result.data || data;
+
+    if (result.warning) {
+      console.warn(result.warning);
+    }
+  } catch (error) {
+    console.warn("Failed to load portfolio data from configured source.", error);
+  }
+}
 
 if (!data) {
   console.error("portfolioData is not defined.");
@@ -483,3 +497,4 @@ const activateNav = () => {
 activateNav();
 window.addEventListener("scroll", activateNav, { passive: true });
 window.addEventListener("resize", activateNav);
+})();

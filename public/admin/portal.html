@@ -11,9 +11,9 @@
     />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ENS%3C/text%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3EST%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./admin.css?v=20260329-12" />
+    <link rel="stylesheet" href="./css/admin.css?v=20260330-03" />
   </head>
   <body>
     <div class="portal-transition-shell is-visible">
@@ -30,12 +30,12 @@
           <article class="portal-card">
             <span class="portal-card-label">User</span>
             <strong>admin</strong>
-            <p>Frontend-only temporary authentication</p>
+            <p>Server session authentication</p>
           </article>
           <article class="portal-card">
             <span class="portal-card-label">Storage</span>
-            <strong>localStorage</strong>
-            <p>このブラウザに保存された編集データを利用します。</p>
+            <strong>SQLite Database</strong>
+            <p>編集内容はバックエンド API 経由で DB に保存されます。</p>
           </article>
           <article class="portal-card">
             <span class="portal-card-label">Modules</span>
@@ -63,7 +63,7 @@
             <span class="portal-status-dot"></span>
             <div>
               <strong>Local Data Ready</strong>
-              <p>保存済みデータと初期値をこのブラウザで利用できます。</p>
+              <p>保存済みデータはサーバー側 DB から読み込みます。</p>
             </div>
           </div>
         </div>
@@ -76,7 +76,9 @@
       </section>
     </div>
 
-    <script src="./auth.js?v=20260329-12"></script>
-    <script src="./portal.js?v=20260329-12"></script>
+    <script src="../assets/js/portfolio-config.js?v=20260330-03"></script>
+    <script src="../assets/js/portfolio-data-source.js?v=20260330-03"></script>
+    <script src="./js/auth.js?v=20260330-03"></script>
+    <script src="./js/portal.js?v=20260330-03"></script>
   </body>
 </html>

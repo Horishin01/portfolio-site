@@ -6,14 +6,14 @@
     <meta
       id="metaDescription"
       name="description"
-      content="元サイトの骨格を踏まえて再構成した、インフラエンジニア向けポートフォリオ"
+      content="仮名とテストデータで構成した、インフラエンジニア向けポートフォリオの初期サンプル"
     />
-    <title>Yoshimura Takuya | Infrastructure Engineer Portfolio</title>
+    <title>Sample Taro | Cloud Infrastructure Engineer Portfolio</title>
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ENS%3C/text%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3EST%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
   </head>
   <body>
     <div class="background-grid" aria-hidden="true"></div>
@@ -23,10 +23,10 @@
     <div class="page-shell">
       <header class="site-header">
         <a class="brand" href="#top" aria-label="ページ上部へ移動">
-          <span class="brand-mark" id="brandMark">NS</span>
+          <span class="brand-mark" id="brandMark">ST</span>
           <span class="brand-copy">
-            <strong id="brandName">Yoshimura Takuya</strong>
-            <small id="brandRole">Infrastructure Engineer</small>
+            <strong id="brandName">Sample Taro</strong>
+            <small id="brandRole">Cloud Infrastructure Engineer</small>
           </span>
         </a>
 
@@ -43,8 +43,8 @@
       <main id="top">
         <section class="hero section" id="heroSection">
           <div class="hero-copy reveal">
-            <p class="eyebrow" id="heroEyebrow">Infrastructure Engineer</p>
-            <h1 id="heroTitle">Naoto Suzuki's portfolio</h1>
+            <p class="eyebrow" id="heroEyebrow">Cloud Infrastructure Engineer</p>
+            <h1 id="heroTitle">Sample Taro's portfolio</h1>
             <p class="hero-summary" id="heroSummary">
               AWS を中心に、設計・構築・運用改善・自動化までを一気通貫で整理したインフラエンジニア向けポートフォリオです。
             </p>
@@ -61,7 +61,7 @@
             <figure class="hero-visual reveal" id="heroVisualCard" aria-label="プロフィールイメージ">
               <img id="heroImage" alt="" hidden />
               <div class="hero-visual-placeholder" id="heroImagePlaceholder" aria-hidden="true">
-                <span class="hero-visual-mark" id="heroImageFallbackMark">NS</span>
+                <span class="hero-visual-mark" id="heroImageFallbackMark">ST</span>
                 <div class="hero-visual-copy">
                   <strong>Image / Illustration</strong>
                   <p>プロフィール写真やイラストを表示できます。</p>
@@ -212,14 +212,16 @@
               <p class="eyebrow">CONTACT</p>
               <h2 id="contactHeading">連絡先</h2>
               <p class="contact-note" id="contactNote">
-                GitHub や職務経歴書など、採用担当者が確認しやすいリンクをまとめています。
+                以下は初期表示用のテストデータです。公開前に GitHub、職務経歴書、各種リンクを実データへ差し替えてください。
               </p>
             </div>
 
             <div class="contact-actions">
-              <a class="button" id="contactMail" href="#">メールで連絡</a>
+              <a class="button" id="contactMail" href="mailto:sample@example.com">sample@example.com</a>
               <div class="social-list" id="contactLinks">
-                <a href="https://github.com/horishin06" target="_blank" rel="noreferrer">GitHub</a>
+                <a href="https://example.com/github-profile" target="_blank" rel="noreferrer">GitHub</a>
+                <a href="https://example.com/resume.pdf" target="_blank" rel="noreferrer">Resume</a>
+                <a href="https://example.com/blog" target="_blank" rel="noreferrer">Blog</a>
               </div>
             </div>
           </div>
@@ -228,14 +230,16 @@
 
       <footer class="site-footer">
         <p>
-          <span id="footerName">Yoshimura Takuya</span>
+          <span id="footerName">Sample Taro</span>
           <span>·</span>
-          <span id="footerRole">Infrastructure Engineer Portfolio</span>
+          <span id="footerRole">Cloud Infrastructure Engineer Portfolio</span>
         </p>
       </footer>
     </div>
 
-    <script src="./site-data.js"></script>
-    <script src="./script.js"></script>
+    <script src="./assets/js/portfolio-config.js"></script>
+    <script src="./assets/js/site-data.js"></script>
+    <script src="./assets/js/portfolio-data-source.js"></script>
+    <script src="./assets/js/script.js"></script>
   </body>
 </html>

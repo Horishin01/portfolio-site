@@ -1,10 +1,10 @@
-(() => {
+;(async () => {
   const refs = {
     openAdminButton: document.getElementById("openAdminButton"),
     portalLogoutButton: document.getElementById("portalLogoutButton")
   };
 
-  if (!window.AdminAuth || !window.AdminAuth.isAuthenticated()) {
+  if (!window.AdminAuth || !(await window.AdminAuth.isAuthenticated())) {
     window.location.replace("./");
     return;
   }
@@ -13,8 +13,8 @@
     window.location.href = "./editor.html";
   });
 
-  refs.portalLogoutButton.addEventListener("click", () => {
-    window.AdminAuth.logout();
+  refs.portalLogoutButton.addEventListener("click", async () => {
+    await window.AdminAuth.logout();
     window.location.replace("./");
   });
 })();

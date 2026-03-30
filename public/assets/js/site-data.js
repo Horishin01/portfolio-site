@@ -1,6 +1,9 @@
 /*
   編集しやすくするための基本ルール
 
+  初期値は仮名・テストデータです。
+  公開前に OWNER と contact.links を実データへ差し替えてください。
+
   1. 名前や GitHub など固定値は OWNER にまとめる
   2. 本文は複数行文字列で書ける
      段落を分けたいときは 1 行空ける
@@ -8,20 +11,18 @@
 */
 
 const OWNER = {
-  name: "Yoshimura Takuya",
-  shortName: "YT",
-  role: "Infrastructure Engineer",
-  github: "https://github.com/horishin06",
-  email: ""
+  name: "Sample Taro",
+  shortName: "ST",
+  role: "Cloud Infrastructure Engineer",
+  github: "https://example.com/github-profile",
+  email: "sample@example.com"
 };
-
-const PORTFOLIO_STORAGE_KEY = "portfolio-site.admin-data";
 
 const defaultPortfolioData = {
   locale: "ja",
   siteTitle: `${OWNER.name} | ${OWNER.role} Portfolio`,
   metaDescription:
-    "元サイトの骨格を踏まえて再構成した、インフラエンジニア向けポートフォリオ",
+    "仮名とテストデータで構成した、インフラエンジニア向けポートフォリオの初期サンプル",
   profile: {
     name: OWNER.name,
     shortName: OWNER.shortName,
@@ -305,10 +306,13 @@ const defaultPortfolioData = {
   },
   contact: {
     heading: "連絡先",
-    note: "GitHub や職務経歴書など、採用担当者が確認しやすいリンクをまとめています。",
+    note:
+      "以下は初期表示用のテストデータです。公開前に GitHub、職務経歴書、各種リンクを実データへ差し替えてください。",
     email: OWNER.email,
     links: [
-      { label: "GitHub", href: OWNER.github }
+      { label: "GitHub", href: OWNER.github },
+      { label: "Resume", href: "https://example.com/resume.pdf" },
+      { label: "Blog", href: "https://example.com/blog" }
     ]
   },
   footerRole: `${OWNER.role} Portfolio`
@@ -372,29 +376,34 @@ const normalizePortfolioData = (value, rawOverride = null) => {
   return normalized;
 };
 
-const readStoredPortfolioData = () => {
-  try {
-    const raw = window.localStorage.getItem(PORTFOLIO_STORAGE_KEY);
+const loadPortfolioData = async ({ scope = "public" } = {}) => {
+  const baseData = normalizePortfolioData(defaultPortfolioData);
 
-    if (!raw) {
-      return null;
-    }
+  if (!window.PortfolioDataSource) {
+    window.portfolioData = deepClone(baseData);
 
-    const parsed = JSON.parse(raw);
-
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-
-    return normalizePortfolioData(mergePortfolioData(defaultPortfolioData, parsed), parsed);
-  } catch (error) {
-    console.warn("Failed to read stored portfolio data.", error);
-    return null;
+    return {
+      data: window.portfolioData,
+      savedAt: "",
+      mode: "default",
+      modeLabel: "Default Data"
+    };
   }
+
+  const result = await window.PortfolioDataSource.loadPortfolioData({
+    scope,
+    defaultData: defaultPortfolioData,
+    mergePortfolioData,
+    normalizePortfolioData
+  });
+
+  window.portfolioData = result.data;
+
+  return result;
 };
 
-window.PORTFOLIO_STORAGE_KEY = PORTFOLIO_STORAGE_KEY;
 window.defaultPortfolioData = defaultPortfolioData;
 window.mergePortfolioData = mergePortfolioData;
 window.normalizePortfolioData = normalizePortfolioData;
-window.portfolioData = readStoredPortfolioData() || normalizePortfolioData(defaultPortfolioData);
+window.loadPortfolioData = loadPortfolioData;
+window.portfolioData = normalizePortfolioData(defaultPortfolioData);

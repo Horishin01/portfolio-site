@@ -1,15 +1,22 @@
-(() => {
-  const STORAGE_KEY = window.PORTFOLIO_STORAGE_KEY || "portfolio-site.admin-data";
-  const LAST_SAVED_KEY = `${STORAGE_KEY}.last-saved-at`;
+;(async () => {
   const MAX_HERO_IMAGE_FILE_SIZE = 2 * 1024 * 1024;
+  const portfolioDataSource = window.PortfolioDataSource || null;
   const mergePortfolioData =
     window.mergePortfolioData || ((baseValue, overrideValue) => overrideValue ?? baseValue);
   const normalizePortfolioData = window.normalizePortfolioData || ((value) => value);
   const defaultData = normalizePortfolioData(deepClone(window.defaultPortfolioData || {}));
-  let state = deepClone(
-    normalizePortfolioData(mergePortfolioData(defaultData, window.portfolioData || defaultData))
-  );
+  const defaultSourceSummary = portfolioDataSource
+    ? portfolioDataSource.describeDataSource()
+    : {
+        mode: "default",
+        modeLabel: "Default Data",
+        description: "データソースが未設定のため、初期値を表示しています。"
+      };
+  let state = deepClone(defaultData);
   let isDirty = false;
+  let currentSourceSummary = defaultSourceSummary;
+  let currentSavedAt = "";
+  let initializationWarning = "";
 
   const refs = {
     app: document.getElementById("adminApp"),
@@ -108,14 +115,6 @@
   function updateSaveButtonState() {
     refs.saveButton.disabled = !isDirty;
     refs.saveButton.setAttribute("aria-disabled", String(!isDirty));
-  }
-
-  function readLastSavedAt() {
-    return window.localStorage.getItem(LAST_SAVED_KEY);
-  }
-
-  function writeLastSavedAt(value) {
-    window.localStorage.setItem(LAST_SAVED_KEY, value);
   }
 
   function formatSavedAt(value) {
@@ -227,7 +226,7 @@
     altField.appendChild(createElement("label", { text: "代替テキスト" }));
     const altInput = createElement("input", {
       type: "text",
-      placeholder: "例: Yoshimura Takuya のプロフィール写真",
+      placeholder: "例: Sample Taro のプロフィール写真",
       value: getAtPath(state, "profile.heroImageAlt") || ""
     });
     altField.appendChild(altInput);
@@ -255,7 +254,7 @@
       const imageSrc = getAtPath(state, "profile.heroImageSrc") || "";
       const imageAlt = getAtPath(state, "profile.heroImageAlt") || "";
 
-      previewMark.textContent = currentName || "NS";
+      previewMark.textContent = currentName || "ST";
 
       if (imageSrc) {
         previewCard.classList.add("has-image");
@@ -860,21 +859,31 @@
     refs.app.replaceChildren(buildAdminLayout());
   }
 
-  function save() {
+  async function save() {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      const savedAt = new Date().toISOString();
-      writeLastSavedAt(savedAt);
-      window.portfolioData = mergePortfolioData(defaultData, state);
+      const result = portfolioDataSource
+        ? await portfolioDataSource.savePortfolioData(state)
+        : {
+            savedAt: new Date().toISOString(),
+            mode: "default",
+            modeLabel: "Default Data"
+          };
+      const savedAt = result.savedAt || new Date().toISOString();
+      currentSavedAt = savedAt;
+      currentSourceSummary = Object.assign({}, currentSourceSummary, result);
+      window.portfolioData = normalizePortfolioData(
+        mergePortfolioData(defaultData, state),
+        state
+      );
       isDirty = false;
       updateSaveButtonState();
       setStatus(
-        `保存しました。最終保存: ${formatSavedAt(savedAt)}。トップページを開き直すと反映されます。`,
+        `保存しました。保存先: ${currentSourceSummary.modeLabel}。最終保存: ${formatSavedAt(savedAt)}。`,
         "success"
       );
     } catch (error) {
       console.error(error);
-      setStatus("保存に失敗しました。", "warning");
+      setStatus("保存に失敗しました。API / DB 設定を確認してください。", "warning");
     }
   }
 
@@ -884,15 +893,29 @@
     render();
   }
 
-  function clearStoredData() {
-    window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(LAST_SAVED_KEY);
-    state = deepClone(defaultData);
-    isDirty = false;
-    window.portfolioData = deepClone(defaultData);
-    updateSaveButtonState();
-    render();
-    setStatus("保存済みデータを削除しました。現在は初期値を表示しています。", "success");
+  async function clearStoredData() {
+    try {
+      const result = portfolioDataSource
+        ? await portfolioDataSource.clearPortfolioData()
+        : null;
+
+      state = deepClone(defaultData);
+      isDirty = false;
+      window.portfolioData = deepClone(defaultData);
+      currentSavedAt = "";
+      currentSourceSummary = result
+        ? Object.assign({}, currentSourceSummary, result)
+        : currentSourceSummary;
+      updateSaveButtonState();
+      render();
+      setStatus(
+        `保存済みデータを削除しました。現在は初期値を表示しています。保存先: ${currentSourceSummary.modeLabel}。`,
+        "success"
+      );
+    } catch (error) {
+      console.error(error);
+      setStatus("保存済みデータの削除に失敗しました。API / DB 設定を確認してください。", "warning");
+    }
   }
 
   function exportJson() {
@@ -942,7 +965,7 @@
     window.location.href = "./portal.html";
   }
 
-  function logout() {
+  async function logout() {
     if (isDirty) {
       const shouldContinue = window.confirm("未保存の変更があります。ログアウトしますか。");
 
@@ -952,22 +975,26 @@
     }
 
     if (window.AdminAuth) {
-      window.AdminAuth.logout();
+      await window.AdminAuth.logout();
     }
 
     window.location.replace("./");
   }
 
-  if (!window.AdminAuth || !window.AdminAuth.isAuthenticated()) {
+  if (!window.AdminAuth || !(await window.AdminAuth.isAuthenticated())) {
     window.location.replace("./");
     return;
   }
 
-  refs.saveButton.addEventListener("click", save);
+  refs.saveButton.addEventListener("click", () => {
+    void save();
+  });
   refs.exportButton.addEventListener("click", exportJson);
   refs.importButton.addEventListener("click", () => refs.importFile.click());
   refs.backToPortalButton.addEventListener("click", moveToPortal);
-  refs.logoutButton.addEventListener("click", logout);
+  refs.logoutButton.addEventListener("click", () => {
+    void logout();
+  });
   refs.resetButton.addEventListener("click", () => {
     if (window.confirm("初期値を読み込みます。現在の編集中の内容は失われます。よろしいですか。")) {
       resetToDefault();
@@ -975,7 +1002,7 @@
   });
   refs.clearButton.addEventListener("click", () => {
     if (window.confirm("保存済みデータを削除します。よろしいですか。")) {
-      clearStoredData();
+      void clearStoredData();
     }
   });
   refs.importFile.addEventListener("change", (event) => {
@@ -1007,18 +1034,44 @@
     event.preventDefault();
 
     if (isDirty) {
-      save();
+      void save();
     }
   });
+
+  try {
+    if (window.loadPortfolioData) {
+      const loadResult = await window.loadPortfolioData({ scope: "admin" });
+      state = deepClone(loadResult.data || defaultData);
+      currentSavedAt = loadResult.savedAt || "";
+      currentSourceSummary = Object.assign({}, currentSourceSummary, {
+        mode: loadResult.mode || currentSourceSummary.mode,
+        modeLabel: loadResult.modeLabel || currentSourceSummary.modeLabel
+      });
+
+      if (loadResult.warning) {
+        initializationWarning = loadResult.warning;
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    state = deepClone(defaultData);
+    initializationWarning = "保存データの読み込みに失敗したため、初期値を表示しています。";
+  }
 
   render();
   updateSaveButtonState();
 
-  const lastSavedAt = formatSavedAt(readLastSavedAt());
-
-  if (lastSavedAt) {
-    setStatus(`管理画面を開きました。最終保存: ${lastSavedAt}`, "success");
+  if (initializationWarning) {
+    setStatus(initializationWarning, "warning");
+  } else if (currentSavedAt) {
+    setStatus(
+      `管理画面を開きました。保存先: ${currentSourceSummary.modeLabel}。最終保存: ${formatSavedAt(currentSavedAt)}。`,
+      "success"
+    );
   } else {
-    setStatus("管理画面を開きました。編集内容は保存すると反映されます。", "success");
+    setStatus(
+      `管理画面を開きました。保存先: ${currentSourceSummary.modeLabel}。編集内容は保存すると反映されます。`,
+      "success"
+    );
   }
 })();

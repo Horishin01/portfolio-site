@@ -11,9 +11,9 @@
     />
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3ENS%3C/text%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3EST%3C/text%3E%3C/svg%3E"
     />
-    <link rel="stylesheet" href="./admin.css?v=20260329-12" />
+    <link rel="stylesheet" href="./css/admin.css?v=20260330-03" />
   </head>
   <body>
     <div class="auth-shell" id="authShell">
@@ -21,7 +21,7 @@
         <p class="admin-eyebrow">Portfolio Admin</p>
         <h1>ログイン</h1>
         <p class="admin-note">
-          簡易版のためフロントエンドのみで認証しています。将来的に DB / バックエンド実装へ置き換える前提です。
+          ログイン認証と保存処理はバックエンド API 経由です。認証済みになると DB 管理の編集画面へ入れます。
         </p>
 
         <form class="auth-form" id="loginForm" novalidate>
@@ -59,7 +59,9 @@
       </section>
     </div>
 
-    <script src="./auth.js?v=20260329-12"></script>
-    <script src="./login.js?v=20260329-12"></script>
+    <script src="../assets/js/portfolio-config.js?v=20260330-03"></script>
+    <script src="../assets/js/portfolio-data-source.js?v=20260330-03"></script>
+    <script src="./js/auth.js?v=20260330-03"></script>
+    <script src="./js/login.js?v=20260330-03"></script>
   </body>
 </html>
