@@ -12,7 +12,7 @@
     <p class="admin-eyebrow">Portfolio Admin</p>
     <h1>ログイン</h1>
     <p class="admin-note">
-      管理画面は ASP.NET Core MVC のコントローラー経由で認証し、保存内容は MySQL に反映します。
+      管理画面は ASP.NET Core Identity で認証します。失敗が 5 回続くと 15 分ロックされます。
     </p>
 
     <form class="auth-form" asp-action="Login" method="post" novalidate>

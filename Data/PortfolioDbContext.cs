@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using PortfolioSite.Models.Identity;
 
 namespace PortfolioSite.Data;
 
-public sealed class PortfolioDbContext : DbContext
+public sealed class PortfolioDbContext : IdentityDbContext<AdminUser>
 {
     public PortfolioDbContext(DbContextOptions<PortfolioDbContext> options) : base(options)
     {
@@ -12,6 +14,8 @@ public sealed class PortfolioDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+
         modelBuilder.Entity<PortfolioContentRecord>(entity =>
         {
             entity.ToTable("portfolio_contents");

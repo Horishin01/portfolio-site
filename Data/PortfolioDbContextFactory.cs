@@ -20,10 +20,7 @@ public sealed class PortfolioDbContextFactory : IDesignTimeDbContextFactory<Port
             ?? throw new InvalidOperationException("Connection string 'PortfolioDatabase' is not configured.");
 
         var optionsBuilder = new DbContextOptionsBuilder<PortfolioDbContext>();
-        optionsBuilder.UseMySql(
-            connectionString,
-            new MySqlServerVersion(new Version(8, 0, 36))
-        );
+        PortfolioDatabaseOptions.Configure(optionsBuilder, connectionString);
 
         return new PortfolioDbContext(optionsBuilder.Options);
     }

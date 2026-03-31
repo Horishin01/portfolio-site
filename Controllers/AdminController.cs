@@ -1,33 +1,33 @@
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using PortfolioSite.Models.Identity;
 using PortfolioSite.Services;
 using PortfolioSite.ViewModels;
 
 namespace PortfolioSite.Controllers;
 
+[Authorize(Roles = AdminRoles.Administrator)]
 [Route("admin")]
 public sealed class AdminController : Controller
 {
-    private readonly AdminCredentialService _adminCredentialService;
     private readonly PortfolioContentService _contentService;
+    private readonly SignInManager<AdminUser> _signInManager;
 
     public AdminController(
-        AdminCredentialService adminCredentialService,
-        PortfolioContentService contentService
+        PortfolioContentService contentService,
+        SignInManager<AdminUser> signInManager
     )
     {
-        _adminCredentialService = adminCredentialService;
         _contentService = contentService;
+        _signInManager = signInManager;
     }
 
     [AllowAnonymous]
     [HttpGet("login")]
     public IActionResult Login(string? returnUrl = null)
     {
-        if (User.Identity?.IsAuthenticated == true)
+        if (User.Identity?.IsAuthenticated == true && User.IsInRole(AdminRoles.Administrator))
         {
             return RedirectToAction(nameof(Index));
         }
@@ -48,26 +48,26 @@ public sealed class AdminController : Controller
             return View(model);
         }
 
-        if (!_adminCredentialService.Validate(model.LoginId, model.Password))
+        var result = await _signInManager.PasswordSignInAsync(
+            model.LoginId,
+            model.Password,
+            isPersistent: false,
+            lockoutOnFailure: true
+        );
+
+        if (result.IsLockedOut)
+        {
+            ModelState.AddModelError(string.Empty, "試行回数が上限に達しました。15 分後に再試行してください。");
+            model.Password = "";
+            return View(model);
+        }
+
+        if (!result.Succeeded)
         {
             ModelState.AddModelError(string.Empty, "ID またはパスワードが違います。");
             model.Password = "";
             return View(model);
         }
-
-        var claims = new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, _adminCredentialService.LoginId),
-            new Claim(ClaimTypes.Name, _adminCredentialService.LoginId)
-        };
-        var principal = new ClaimsPrincipal(
-            new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)
-        );
-
-        await HttpContext.SignInAsync(
-            CookieAuthenticationDefaults.AuthenticationScheme,
-            principal
-        );
 
         if (!string.IsNullOrWhiteSpace(model.ReturnUrl) && Url.IsLocalUrl(model.ReturnUrl))
         {
@@ -84,7 +84,7 @@ public sealed class AdminController : Controller
         var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
         return View(new AdminDashboardViewModel
         {
-            LoginId = _adminCredentialService.LoginId,
+            LoginId = User.Identity?.Name ?? "",
             SiteTitle = snapshot.Document.SiteTitle,
             UpdatedAtUtc = snapshot.UpdatedAtUtc
         });
@@ -179,7 +179,7 @@ public sealed class AdminController : Controller
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await _signInManager.SignOutAsync();
         return RedirectToAction(nameof(Login));
     }
 

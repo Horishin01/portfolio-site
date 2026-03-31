@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "PortfolioSite",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/bin/Debug/net8.0/PortfolioSite.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5078",
+        "ADMIN_LOGIN_ID": "admin",
+        "ADMIN_PASSWORD_HASH": "AQAAAAIAAYagAAAAEFcEgy07tuTAsnHf5YxiA/ziZeBz2Q1rq1OraUIU6EckDA9XIERnYHPr4CqFNBnZ/g=="
+      },
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      }
+    }
+  ]
+}
