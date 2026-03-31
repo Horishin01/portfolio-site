@@ -2,22 +2,85 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "stop-portfolio-site",
+      "type": "shell",
+      "command": "pkill",
+      "args": [
+        "-f",
+        "/mnt/c/Users/Owner/Documents/GitHub/portfolio-site/LocalData/DebugBuild/PortfolioSite.dll|/mnt/c/Users/Owner/Documents/GitHub/portfolio-site/bin/Debug/net8.0/PortfolioSite.dll"
+      ],
+      "problemMatcher": [],
+      "linux": {
+        "command": "pkill",
+        "args": [
+          "-f",
+          "/mnt/c/Users/Owner/Documents/GitHub/portfolio-site/LocalData/DebugBuild/PortfolioSite.dll|/mnt/c/Users/Owner/Documents/GitHub/portfolio-site/bin/Debug/net8.0/PortfolioSite.dll"
+        ]
+      },
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "C:/Users/Owner/Documents/GitHub/portfolio-site/scripts/stop-portfolio-site.ps1",
+          "-RepoRoot",
+          "C:/Users/Owner/Documents/GitHub/portfolio-site"
+        ]
+      }
+    },
+    {
+      "label": "clean-debug-build",
+      "type": "shell",
+      "command": "rm",
+      "args": [
+        "-rf",
+        "${workspaceFolder}/LocalData/DebugBuild"
+      ],
+      "problemMatcher": [],
+      "windows": {
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-Command",
+          "Remove-Item -Path 'C:/Users/Owner/Documents/GitHub/portfolio-site/LocalData/DebugBuild' -Recurse -Force -ErrorAction SilentlyContinue"
+        ]
+      }
+    },
+    {
       "label": "rebuild",
       "command": "dotnet",
       "type": "process",
       "args": [
         "build",
-        "${workspaceFolder}/portfolio-site.sln",
-        "/t:Rebuild"
+        "${workspaceFolder}/PortfolioSite.csproj",
+        "/t:Rebuild",
+        "-o",
+        "${workspaceFolder}/LocalData/DebugBuild"
       ],
       "problemMatcher": "$msCompile",
       "windows": {
         "args": [
           "build",
-          "C:/Users/Owner/Documents/GitHub/portfolio-site/portfolio-site.sln",
-          "/t:Rebuild"
+          "C:/Users/Owner/Documents/GitHub/portfolio-site/PortfolioSite.csproj",
+          "/t:Rebuild",
+          "-o",
+          "C:/Users/Owner/Documents/GitHub/portfolio-site/LocalData/DebugBuild"
         ]
       }
+    },
+    {
+      "label": "prepare-debug",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "stop-portfolio-site",
+        "clean-debug-build",
+        "rebuild"
+      ],
+      "problemMatcher": []
     }
   ]
 }

@@ -31,6 +31,7 @@ public sealed class PortfolioDbContext : IdentityDbContext<AdminUser>
             entity.Property(x => x.Locale).IsRequired();
             entity.Property(x => x.SiteTitle).IsRequired();
             entity.Property(x => x.MetaDescription).IsRequired();
+            entity.Property(x => x.FaviconSrc).IsRequired();
             entity.Property(x => x.ProfileName).IsRequired();
             entity.Property(x => x.ProfileShortName).IsRequired();
             entity.Property(x => x.ProfileRole).IsRequired();

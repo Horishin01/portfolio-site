@@ -53,7 +53,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
+});
 builder.Services.AddScoped<PortfolioContentService>();
 builder.Services.AddScoped<PortfolioDbInitializer>();
 

@@ -16,6 +16,7 @@ public sealed class HomeController : Controller
     public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
         var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
+        ViewData["FaviconHref"] = snapshot.Document.FaviconSrc;
         return View(snapshot.Document);
     }
 

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 using PortfolioSite.Models.Content;
 
 namespace PortfolioSite.ViewModels;
@@ -5,7 +7,14 @@ namespace PortfolioSite.ViewModels;
 public sealed class PortfolioEditorViewModel
 {
     public PortfolioDocument Document { get; set; } = new();
+
+    [Display(Name = "ファビコンアップロード")]
+    public IFormFile? FaviconFile { get; set; }
+
+    [Display(Name = "ヒーロー画像アップロード")]
+    public IFormFile? HeroImageFile { get; set; }
     public DateTime UpdatedAtUtc { get; init; }
+    public DateTime UpdatedAtJst => AdminDateTimeDisplay.ToJst(UpdatedAtUtc);
 
     public static PortfolioEditorViewModel FromSnapshot(PortfolioSnapshot snapshot)
     {

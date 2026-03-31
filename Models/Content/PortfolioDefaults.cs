@@ -9,6 +9,7 @@ public static class PortfolioDefaults
             Locale = "ja",
             SiteTitle = "Sample Taro | Cloud Infrastructure Engineer Portfolio",
             MetaDescription = "仮名とテストデータで構成した、インフラエンジニア向けポートフォリオの初期サンプル",
+            FaviconSrc = "",
             Profile = new ProfileContent
             {
                 Name = "Sample Taro",

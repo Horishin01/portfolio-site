@@ -1,48 +1,65 @@
 @model AdminLoginViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Portfolio Admin Login";
+    ViewData["Title"] = "管理者ログイン";
     var hasErrors = !ViewData.ModelState.IsValid;
     var message = hasErrors
-        ? ViewData.ModelState.Values.SelectMany(value => value.Errors).FirstOrDefault()?.ErrorMessage ?? "入力内容を確認してください。"
+        ? ValidationMessageLocalizer.GetFirstError(ViewData.ModelState) ?? "入力内容を確認してください。"
         : "ID とパスワードを入力してください。";
 }
 <div class="auth-shell" id="authShell">
-  <section class="auth-card">
-    <p class="admin-eyebrow">Portfolio Admin</p>
-    <h1>ログイン</h1>
-    <p class="admin-note">
-      管理画面は ASP.NET Core Identity で認証します。失敗が 5 回続くと 15 分ロックされます。
-    </p>
+  <section class="auth-layout">
+    <div class="auth-intro">
+      <p class="admin-eyebrow">管理画面</p>
+      <h1>ログイン</h1>
+      <p class="admin-note">
+        管理画面は ASP.NET Core Identity で認証します。5回連続で失敗すると、15分間ログインできません。
+      </p>
 
-    <form class="auth-form" asp-action="Login" method="post" novalidate>
-      <input asp-for="ReturnUrl" type="hidden" />
-
-      <div class="field">
-        <label asp-for="LoginId"></label>
-        <input asp-for="LoginId" autocomplete="username" />
+      <div class="auth-intro-grid">
+        <article class="auth-mini-card">
+          <span class="portal-card-label">認証</span>
+          <strong>Identity</strong>
+          <p>Cookie セッションでログイン状態を管理します。</p>
+        </article>
+        <article class="auth-mini-card">
+          <span class="portal-card-label">保存方式</span>
+          <strong>EF Core</strong>
+          <p>編集内容は構造化されたテーブルへ保存されます。</p>
+        </article>
       </div>
+    </div>
 
-      <div class="field">
-        <label asp-for="Password"></label>
-        <div class="password-input-shell">
-          <input asp-for="Password" autocomplete="current-password" />
-          <button
-            class="password-visibility-button"
-            type="button"
-            data-password-toggle
-            data-password-target="Password"
-            aria-label="パスワードを表示"
-            aria-pressed="false"
-            title="パスワードを表示・非表示"
-          >
-            <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
-          </button>
+    <div class="auth-card">
+      <form class="auth-form" asp-action="Login" method="post" novalidate>
+        <input asp-for="ReturnUrl" type="hidden" />
+
+        <div class="field">
+          <label asp-for="LoginId"></label>
+          <input asp-for="LoginId" autocomplete="username" />
         </div>
-      </div>
 
-      <p class="status-message @(hasErrors ? "is-error" : string.Empty)">@message</p>
-      <button class="button" type="submit">ログイン</button>
-    </form>
+        <div class="field">
+          <label asp-for="Password"></label>
+          <div class="password-input-shell">
+            <input asp-for="Password" autocomplete="current-password" />
+            <button
+              class="password-visibility-button"
+              type="button"
+              data-password-toggle
+              data-password-target="Password"
+              aria-label="パスワードを表示"
+              aria-pressed="false"
+              title="パスワードを表示・非表示"
+            >
+              <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <p class="status-message @(hasErrors ? "is-error" : string.Empty)">@message</p>
+        <button class="button" type="submit">ログイン</button>
+      </form>
+    </div>
   </section>
 </div>

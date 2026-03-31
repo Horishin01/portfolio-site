@@ -253,6 +253,10 @@ namespace PortfolioSite.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("FaviconSrc")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<string>("FooterRole")
                         .IsRequired()
                         .HasColumnType("longtext");

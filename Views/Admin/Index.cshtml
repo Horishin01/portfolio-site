@@ -1,33 +1,45 @@
 @model AdminDashboardViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Portfolio Administrator Portal";
+    ViewData["Title"] = "ポートフォリオ管理ポータル";
 }
 <div class="portal-transition-shell is-visible">
   <section class="portal-transition-screen">
-    <div class="portal-hero">
-      <p class="admin-eyebrow">Administrator Portal</p>
-      <h1>Secure Control Center</h1>
-      <p class="admin-note">
-        認証済みセッションを確認しました。ここから DB ベースの編集画面へ入り、ポートフォリオ本体を更新できます。
-      </p>
+    <div class="portal-topline">
+      <div class="portal-hero">
+        <p class="admin-eyebrow">管理画面</p>
+        <h1>管理ポータル</h1>
+        <p class="admin-note">
+          ログインを確認しました。ここから編集画面へ進み、公開中のポートフォリオを更新できます。
+        </p>
+      </div>
+
+      <aside class="portal-command-card">
+        <span class="portal-card-label">公開中の情報</span>
+        <strong>@Model.SiteTitle</strong>
+        <p>公開中のタイトルと最終更新日時を確認できます。</p>
+        <div class="editor-chip-row">
+          <span class="editor-chip">ログイン中: @Model.LoginId</span>
+          <span class="editor-chip">更新日時 @Model.UpdatedAtJst.ToString("MM-dd HH:mm") JST</span>
+        </div>
+      </aside>
     </div>
 
     <div class="portal-overview-grid">
       <article class="portal-card">
-        <span class="portal-card-label">User</span>
+        <span class="portal-card-label">ログインID</span>
         <strong>@Model.LoginId</strong>
-        <p>ASP.NET Core Identity</p>
+        <p>ASP.NET Core Identity で認証</p>
       </article>
       <article class="portal-card">
-        <span class="portal-card-label">Storage</span>
+        <span class="portal-card-label">保存方式</span>
         <strong>MySQL + EF Core</strong>
         <p>Controller と DbContext を通して保存します。</p>
       </article>
       <article class="portal-card">
-        <span class="portal-card-label">Current Site</span>
+        <span class="portal-card-label">公開サイト</span>
         <strong>@Model.SiteTitle</strong>
-        <p>最終更新: @Model.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+        <p>最終更新: @Model.UpdatedAtJst.ToString("yyyy-MM-dd HH:mm") JST</p>
       </article>
     </div>
 
@@ -35,21 +47,21 @@
       <div class="portal-status-item">
         <span class="portal-status-dot"></span>
         <div>
-          <strong>Authentication</strong>
-          <p>Identity ベースの管理者ログインと Cookie 発行が完了しています。</p>
+          <strong>認証</strong>
+          <p>Identity による管理者認証と Cookie セッションが有効です。</p>
         </div>
       </div>
       <div class="portal-status-item">
         <span class="portal-status-dot"></span>
         <div>
-          <strong>Rendering</strong>
-          <p>公開ページは Razor View でサーバー描画します。</p>
+          <strong>描画</strong>
+          <p>公開ページは Razor View で表示されます。</p>
         </div>
       </div>
       <div class="portal-status-item">
         <span class="portal-status-dot"></span>
         <div>
-          <strong>Persistence</strong>
+          <strong>保存</strong>
           <p>ポートフォリオ本体はテーブル構造で保存し、EF Core で更新します。</p>
         </div>
       </div>

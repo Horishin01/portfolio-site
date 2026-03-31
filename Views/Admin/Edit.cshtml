@@ -1,15 +1,12 @@
 @model PortfolioEditorViewModel
 @{
     Layout = "_AdminLayout";
-    ViewData["Title"] = "Portfolio Admin Editor";
+    ViewData["Title"] = "ポートフォリオ編集";
 
     var tone = TempData["StatusTone"] as string;
     var tempMessage = TempData["StatusMessage"] as string;
     var hasErrors = !ViewData.ModelState.IsValid;
-    var validationMessage = ViewData.ModelState.Values
-        .SelectMany(value => value.Errors)
-        .FirstOrDefault()
-        ?.ErrorMessage;
+    var validationMessage = ValidationMessageLocalizer.GetFirstError(ViewData.ModelState);
     var statusMessage = validationMessage ?? tempMessage ?? "フォームを編集して保存してください。";
     var statusClass = hasErrors
         ? "is-error"
@@ -17,16 +14,35 @@
         : tone is "warning" ? "is-warning"
         : string.Empty;
     var doc = Model.Document;
+    var hasFavicon = !string.IsNullOrWhiteSpace(doc.FaviconSrc);
     var hasHeroImage = !string.IsNullOrWhiteSpace(doc.Profile.HeroImageSrc);
     var heroMark = string.IsNullOrWhiteSpace(doc.Profile.ShortName) ? "IMG" : doc.Profile.ShortName;
+    var totalCards = doc.Profile.Highlights.Count
+        + doc.CareerSection.Items.Count
+        + doc.SkillsSection.Categories.Count
+        + doc.WorksSection.Items.Count
+        + doc.PersonalSection.Items.Count
+        + doc.Contact.Links.Count;
+    var totalSkillItems = doc.SkillsSection.Categories.Sum(category => category.Items.Count);
+    var sectionLinks = new (string Id, string Eyebrow, string Label)[]
+    {
+        ("site-panel", "設定", "基本設定"),
+        ("hero-panel", "ヒーロー", "プロフィール"),
+        ("profile-panel", "紹介", "自己紹介"),
+        ("career-panel", "経歴", "在籍歴"),
+        ("skills-panel", "スキル", "スキル"),
+        ("works-panel", "実績", "実績"),
+        ("personal-panel", "個人", "個人活動"),
+        ("contact-panel", "連絡", "連絡先")
+    };
 }
 <div class="admin-shell is-visible" id="adminShell">
   <header class="admin-header">
     <div>
-      <p class="admin-eyebrow">Portfolio Admin</p>
+      <p class="admin-eyebrow">管理画面</p>
       <h1>管理画面</h1>
       <p class="admin-note">
-        ASP.NET Core MVC のフォーム送信で、ポートフォリオ本体を DB テーブルへ保存します。
+        データベースに保存される内容を、セクションごとに編集できます。ここで保存した内容が公開ページに反映されます。
       </p>
     </div>
 
@@ -42,7 +58,7 @@
 
   <section class="admin-toolbar">
     <div class="toolbar-group">
-      <span class="field-help">最終更新: @Model.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</span>
+      <span class="field-help">最終更新: @Model.UpdatedAtJst.ToString("yyyy-MM-dd HH:mm:ss 'JST'")</span>
     </div>
     <div class="toolbar-group">
       <form asp-action="Reset" method="post" class="inline-form" data-confirm="初期データへ戻します。現在の保存内容は上書きされます。">
@@ -53,15 +69,65 @@
 
   <p class="status-message @statusClass">@statusMessage</p>
 
-  <form id="editorForm" asp-action="Edit" method="post">
+  <form id="editorForm" asp-action="Edit" method="post" enctype="multipart/form-data">
+    <section class="editor-overview">
+      <div class="editor-overview-main">
+        <p class="admin-eyebrow">現在の設定</p>
+        <h2>@doc.SiteTitle</h2>
+        <p class="admin-note">
+          言語設定は <strong>@doc.Locale</strong>、ファビコンは <strong>@(hasFavicon ? "設定済み" : "未設定")</strong>、ヒーロー画像は <strong>@(hasHeroImage ? "設定済み" : "未設定")</strong> です。
+          保存した内容は EF Core を通してデータベースに反映され、公開ページに表示されます。
+        </p>
+
+        <div class="editor-chip-row">
+          <span class="editor-chip">セクション数 @sectionLinks.Length</span>
+          <span class="editor-chip">編集項目数 @totalCards</span>
+          <span class="editor-chip">スキル数 @totalSkillItems</span>
+          <span class="editor-chip">最終更新 @Model.UpdatedAtJst.ToString("MM-dd HH:mm") JST</span>
+        </div>
+      </div>
+
+      <div class="editor-overview-stats">
+        <article class="editor-stat-card">
+          <span class="editor-stat-label">保存</span>
+          <strong>EF Core</strong>
+          <p>構造化されたテーブルに保存</p>
+        </article>
+        <article class="editor-stat-card">
+          <span class="editor-stat-label">ヒーロー画像</span>
+          <strong>@(hasHeroImage ? "設定済み" : "未設定")</strong>
+          <p>@(hasHeroImage ? "画像が設定されています。" : "画像をアップロードするか、画像URLを入力してください。")</p>
+        </article>
+        <article class="editor-stat-card">
+          <span class="editor-stat-label">項目数</span>
+          <strong>@totalCards</strong>
+          <p>編集対象のカードとリンクの合計</p>
+        </article>
+      </div>
+    </section>
+
+    <nav class="section-nav" aria-label="編集セクションナビゲーション">
+      @foreach (var sectionLink in sectionLinks)
+      {
+          <a class="section-nav-link" href="#@sectionLink.Id">
+            <span>@sectionLink.Eyebrow</span>
+            <strong>@sectionLink.Label</strong>
+          </a>
+      }
+    </nav>
+
     <main class="admin-layout">
-      <section class="admin-section">
+      <section class="admin-section" id="site-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Site</p>
+          <p class="section-eyebrow">設定</p>
           <h2>基本設定</h2>
           <p class="section-description">
-            サイト全体のメタ情報です。
+            サイト全体のメタ情報とブラウザタブ用アイコンです。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">基本情報</span>
+            <span class="section-meta-tag">@(hasFavicon ? "ファビコン設定済み" : "ファビコン未設定")</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field-grid">
@@ -82,31 +148,94 @@
               <textarea asp-for="Document.MetaDescription"></textarea>
             </div>
           </div>
+
+          <div class="field image-field">
+            <label>ファビコンプレビュー</label>
+            <div class="image-field-shell">
+              <div class="favicon-preview-row">
+                <div class="image-preview-card icon-preview-card @(hasFavicon ? "has-image" : string.Empty)" id="faviconPreviewCard">
+                  <img
+                    class="image-preview-media"
+                    id="faviconPreviewMedia"
+                    src="@(hasFavicon ? doc.FaviconSrc : string.Empty)"
+                    alt="ファビコンプレビュー"
+                    hidden="@(!hasFavicon)"
+                  />
+                  <div class="image-preview-placeholder">
+                    <span class="image-preview-mark">ICO</span>
+                    <div class="image-preview-copy">
+                      <strong>ブラウザタブのアイコン</strong>
+                      <p>アップロードまたは URL を設定すると、ここにプレビューされます。</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field favicon-upload-field">
+                  <label asp-for="FaviconFile">ファビコンアップロード</label>
+                  <input asp-for="FaviconFile" id="faviconFile" type="file" accept=".ico,.png,.svg,.webp,.jpg,.jpeg,.gif" />
+                  <p class="field-help">ICO / PNG / SVG / WEBP / JPG / GIF に対応しています。1MBまでアップロードでき、ファビコンURLより優先して保存されます。</p>
+                  <p class="field-help">未設定の場合は既定のアイコンを使用します。</p>
+
+                  <div class="hero-upload-meta">
+                    <div class="field">
+                      <label asp-for="Document.FaviconSrc"></label>
+                      <input asp-for="Document.FaviconSrc" id="faviconSrcInput" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section" id="hero-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Hero</p>
+          <p class="section-eyebrow">ヒーロー</p>
           <h2>プロフィール</h2>
           <p class="section-description">
-            ファーストビューとプロフィール基本情報です。
+            ファーストビューとプロフィールの基本情報です。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">@(hasHeroImage ? "画像設定済み" : "画像未設定")</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field image-field">
-            <label>Hero Image Preview</label>
+            <label>ヒーロー画像プレビュー</label>
             <div class="image-field-shell">
-              <div class="image-preview-card @(hasHeroImage ? "has-image" : string.Empty)">
-                @if (hasHeroImage)
-                {
-                    <img class="image-preview-media" src="@doc.Profile.HeroImageSrc" alt="@doc.Profile.HeroImageAlt" />
-                }
-                <div class="image-preview-placeholder">
-                  <span class="image-preview-mark">@heroMark</span>
-                  <div class="image-preview-copy">
-                    <strong>Hero Image</strong>
-                    <p>画像 URL を指定すると、ここにプレビューされます。</p>
+              <div class="hero-preview-row">
+                <div class="image-preview-card @(hasHeroImage ? "has-image" : string.Empty)" id="heroImagePreviewCard">
+                  <img
+                    class="image-preview-media"
+                    id="heroImagePreviewMedia"
+                    src="@(hasHeroImage ? doc.Profile.HeroImageSrc : string.Empty)"
+                    alt="@(string.IsNullOrWhiteSpace(doc.Profile.HeroImageAlt) ? "ヒーロー画像プレビュー" : doc.Profile.HeroImageAlt)"
+                    hidden="@(!hasHeroImage)"
+                  />
+                  <div class="image-preview-placeholder">
+                    <span class="image-preview-mark">@heroMark</span>
+                    <div class="image-preview-copy">
+                      <strong>ヒーロー画像</strong>
+                      <p>画像をアップロードするか、画像URLを入力すると、ここに表示されます。</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="field hero-upload-field">
+                  <label asp-for="HeroImageFile">ヒーロー画像アップロード</label>
+                  <input asp-for="HeroImageFile" id="heroImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,.gif" />
+                  <p class="field-help">JPG / PNG / WEBP / GIF に対応しています。5MBまでアップロードでき、画像URLより優先して保存されます。</p>
+                  <p class="field-help">画像をアップロードしない場合は、下の画像URLを使用します。画像の説明文もここで設定できます。</p>
+
+                  <div class="hero-upload-meta">
+                    <div class="field">
+                      <label asp-for="Document.Profile.HeroImageSrc"></label>
+                      <input asp-for="Document.Profile.HeroImageSrc" id="heroImageSrcInput" />
+                    </div>
+                    <div class="field">
+                      <label asp-for="Document.Profile.HeroImageAlt"></label>
+                      <input asp-for="Document.Profile.HeroImageAlt" id="heroImageAltInput" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -133,14 +262,6 @@
                     <input asp-for="Document.Profile.HeroTitle" />
                   </div>
                   <div class="field field-full">
-                    <label asp-for="Document.Profile.HeroImageSrc"></label>
-                    <input asp-for="Document.Profile.HeroImageSrc" />
-                  </div>
-                  <div class="field field-full">
-                    <label asp-for="Document.Profile.HeroImageAlt"></label>
-                    <input asp-for="Document.Profile.HeroImageAlt" />
-                  </div>
-                  <div class="field field-full">
                     <label asp-for="Document.Profile.Summary"></label>
                     <textarea asp-for="Document.Profile.Summary"></textarea>
                   </div>
@@ -157,7 +278,7 @@
           <div class="collection">
             <div class="collection-header">
               <div>
-                <p class="section-eyebrow">Highlights</p>
+                <p class="section-eyebrow">指標</p>
                 <h3>プロフィール指標</h3>
               </div>
             </div>
@@ -166,7 +287,7 @@
               {
                   <article class="item-card">
                     <div class="item-card-header">
-                      <h4>Highlight @(i + 1)</h4>
+                      <h4>指標 @(i + 1)</h4>
                     </div>
                     <div class="field-grid">
                       <div class="field">
@@ -185,13 +306,16 @@
         </div>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section" id="profile-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Profile</p>
+          <p class="section-eyebrow">紹介</p>
           <h2>自己紹介セクション</h2>
           <p class="section-description">
-            PROFILE エリアの本文と補足情報です。
+            自己紹介エリアの本文と補足情報です。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">紹介本文</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field-grid">
@@ -231,13 +355,16 @@
         </div>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section" id="career-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Career</p>
+          <p class="section-eyebrow">経歴</p>
           <h2>在籍歴</h2>
           <p class="section-description">
-            Career セクションの見出しと各項目です。
+            在籍歴セクションの見出しと各項目を編集します。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">@doc.CareerSection.Items.Count 件</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field-grid">
@@ -254,8 +381,8 @@
           <div class="collection">
             <div class="collection-header">
               <div>
-                <p class="section-eyebrow">Items</p>
-                <h3>Career Items</h3>
+                <p class="section-eyebrow">項目</p>
+                <h3>在籍歴項目</h3>
               </div>
             </div>
             <div class="item-list">
@@ -263,7 +390,7 @@
               {
                   <article class="item-card">
                     <div class="item-card-header">
-                      <h4>Career @(i + 1)</h4>
+                      <h4>在籍歴 @(i + 1)</h4>
                     </div>
                     <div class="field-grid">
                       <div class="field">
@@ -298,13 +425,17 @@
         </div>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section" id="skills-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Skills</p>
+          <p class="section-eyebrow">スキル</p>
           <h2>スキル</h2>
           <p class="section-description">
             カテゴリごとにスキルを管理します。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">カテゴリ @doc.SkillsSection.Categories.Count</span>
+            <span class="section-meta-tag">項目 @totalSkillItems</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field-grid">
@@ -321,8 +452,8 @@
           <div class="collection">
             <div class="collection-header">
               <div>
-                <p class="section-eyebrow">Categories</p>
-                <h3>Skill Categories</h3>
+                <p class="section-eyebrow">カテゴリ</p>
+                <h3>スキルカテゴリ</h3>
               </div>
             </div>
             <div class="item-list">
@@ -330,7 +461,7 @@
               {
                   <article class="item-card">
                     <div class="item-card-header">
-                      <h4>Category @(categoryIndex + 1)</h4>
+                      <h4>カテゴリ @(categoryIndex + 1)</h4>
                     </div>
                     <div class="field-grid">
                       <div class="field">
@@ -371,13 +502,16 @@
         </div>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section" id="works-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Works</p>
+          <p class="section-eyebrow">実績</p>
           <h2>実績</h2>
           <p class="section-description">
-            実績カードを順番どおりに編集します。
+            実績カードを表示順に編集できます。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">@doc.WorksSection.Items.Count 件</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field-grid">
@@ -396,7 +530,7 @@
             {
                 <article class="item-card">
                   <div class="item-card-header">
-                    <h4>Work @(i + 1)</h4>
+                    <h4>実績 @(i + 1)</h4>
                   </div>
                   <div class="field-grid">
                     <div class="field">
@@ -438,13 +572,16 @@
         </div>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section" id="personal-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Personal</p>
+          <p class="section-eyebrow">個人</p>
           <h2>個人活動</h2>
           <p class="section-description">
-            PERSONAL セクションのカードを管理します。
+            個人活動セクションのカードを編集します。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">@doc.PersonalSection.Items.Count 件</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field-grid">
@@ -463,7 +600,7 @@
             {
                 <article class="item-card">
                   <div class="item-card-header">
-                    <h4>Personal @(i + 1)</h4>
+                    <h4>個人活動 @(i + 1)</h4>
                   </div>
                   <div class="field-grid">
                     <div class="field">
@@ -493,13 +630,16 @@
         </div>
       </section>
 
-      <section class="admin-section">
+      <section class="admin-section" id="contact-panel">
         <div class="section-header">
-          <p class="section-eyebrow">Contact</p>
+          <p class="section-eyebrow">連絡先</p>
           <h2>連絡先</h2>
           <p class="section-description">
-            CONTACT セクションと外部リンクです。
+            連絡先と外部リンクを編集します。
           </p>
+          <div class="section-header-meta">
+            <span class="section-meta-tag">@doc.Contact.Links.Count 件</span>
+          </div>
         </div>
         <div class="admin-section-content">
           <div class="field-grid">
@@ -522,7 +662,7 @@
             {
                 <article class="item-card">
                   <div class="item-card-header">
-                    <h4>Link @(i + 1)</h4>
+                    <h4>リンク @(i + 1)</h4>
                   </div>
                   <div class="field-grid">
                     <div class="field">

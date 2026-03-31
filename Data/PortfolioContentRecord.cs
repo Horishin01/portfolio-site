@@ -6,6 +6,7 @@ public sealed class PortfolioContentRecord
     public string Locale { get; set; } = "ja";
     public string SiteTitle { get; set; } = "";
     public string MetaDescription { get; set; } = "";
+    public string FaviconSrc { get; set; } = "";
     public string ProfileName { get; set; } = "";
     public string ProfileShortName { get; set; } = "";
     public string ProfileRole { get; set; } = "";

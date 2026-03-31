@@ -46,6 +46,7 @@ public sealed class PortfolioDbInitializer
             }
 
             await _dbContext.Database.EnsureCreatedAsync(cancellationToken);
+            await EnsureSqlitePortfolioSchemaAsync(cancellationToken);
         }
         else
         {
@@ -62,6 +63,22 @@ public sealed class PortfolioDbInitializer
 
     private async Task<bool> HasLegacyJsonSchemaAsync(CancellationToken cancellationToken)
     {
+        return await HasSqliteColumnAsync("portfolio_contents", "JsonContent", cancellationToken);
+    }
+
+    private async Task EnsureSqlitePortfolioSchemaAsync(CancellationToken cancellationToken)
+    {
+        if (!await HasSqliteColumnAsync("portfolio_contents", "FaviconSrc", cancellationToken))
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE portfolio_contents ADD COLUMN FaviconSrc TEXT NOT NULL DEFAULT '';",
+                cancellationToken
+            );
+        }
+    }
+
+    private async Task<bool> HasSqliteColumnAsync(string tableName, string columnName, CancellationToken cancellationToken)
+    {
         var connection = _dbContext.Database.GetDbConnection();
         var openedHere = false;
 
@@ -74,7 +91,9 @@ public sealed class PortfolioDbInitializer
         try
         {
             await using var command = connection.CreateCommand();
-            command.CommandText = "SELECT 1 FROM pragma_table_info('portfolio_contents') WHERE name = 'JsonContent' LIMIT 1;";
+            var escapedTableName = tableName.Replace("'", "''", StringComparison.Ordinal);
+            var escapedColumnName = columnName.Replace("'", "''", StringComparison.Ordinal);
+            command.CommandText = $"SELECT 1 FROM pragma_table_info('{escapedTableName}') WHERE name = '{escapedColumnName}' LIMIT 1;";
             var result = await command.ExecuteScalarAsync(cancellationToken);
             return result is not null && result != DBNull.Value;
         }

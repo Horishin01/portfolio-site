@@ -100,6 +100,7 @@ public sealed class PortfolioContentService
             Locale = record.Locale,
             SiteTitle = record.SiteTitle,
             MetaDescription = record.MetaDescription,
+            FaviconSrc = record.FaviconSrc,
             Profile = new ProfileContent
             {
                 Name = record.ProfileName,
@@ -359,6 +360,7 @@ public sealed class PortfolioContentService
         record.Locale = document.Locale;
         record.SiteTitle = document.SiteTitle;
         record.MetaDescription = document.MetaDescription;
+        record.FaviconSrc = document.FaviconSrc;
         record.ProfileName = document.Profile.Name;
         record.ProfileShortName = document.Profile.ShortName;
         record.ProfileRole = document.Profile.Role;
@@ -392,23 +394,112 @@ public sealed class PortfolioContentService
 
     private static PortfolioDocument Normalize(PortfolioDocument document)
     {
+        static string EmptyIfNull(string? value) => value ?? "";
+
+        document.Locale = string.IsNullOrWhiteSpace(document.Locale) ? "ja" : document.Locale;
+        document.SiteTitle = EmptyIfNull(document.SiteTitle);
+        document.MetaDescription = EmptyIfNull(document.MetaDescription);
+        document.FaviconSrc = EmptyIfNull(document.FaviconSrc);
+        document.FooterRole = EmptyIfNull(document.FooterRole);
+
         document.Profile ??= new ProfileContent();
         document.Profile.Highlights ??= [];
+        document.Profile.Name = EmptyIfNull(document.Profile.Name);
+        document.Profile.ShortName = EmptyIfNull(document.Profile.ShortName);
+        document.Profile.Role = EmptyIfNull(document.Profile.Role);
+        document.Profile.HeroEyebrow = EmptyIfNull(document.Profile.HeroEyebrow);
+        document.Profile.HeroTitle = EmptyIfNull(document.Profile.HeroTitle);
+        document.Profile.HeroImageSrc = EmptyIfNull(document.Profile.HeroImageSrc);
+        document.Profile.HeroImageAlt = EmptyIfNull(document.Profile.HeroImageAlt);
+        document.Profile.Summary = EmptyIfNull(document.Profile.Summary);
+        document.Profile.Tags = EmptyIfNull(document.Profile.Tags);
+        foreach (var highlight in document.Profile.Highlights)
+        {
+            highlight.Label = EmptyIfNull(highlight.Label);
+            highlight.Value = EmptyIfNull(highlight.Value);
+        }
+
         document.ProfileSection ??= new ProfileSectionContent();
+        document.ProfileSection.Heading = EmptyIfNull(document.ProfileSection.Heading);
+        document.ProfileSection.Intro = EmptyIfNull(document.ProfileSection.Intro);
+        document.ProfileSection.Lead = EmptyIfNull(document.ProfileSection.Lead);
+        document.ProfileSection.Body = EmptyIfNull(document.ProfileSection.Body);
+        document.ProfileSection.FocusHeading = EmptyIfNull(document.ProfileSection.FocusHeading);
+        document.ProfileSection.FocusItems = EmptyIfNull(document.ProfileSection.FocusItems);
+        document.ProfileSection.CertificationsHeading = EmptyIfNull(document.ProfileSection.CertificationsHeading);
+        document.ProfileSection.Certifications = EmptyIfNull(document.ProfileSection.Certifications);
+
         document.CareerSection ??= new CareerSectionContent();
         document.CareerSection.Items ??= [];
+        document.CareerSection.Heading = EmptyIfNull(document.CareerSection.Heading);
+        document.CareerSection.Intro = EmptyIfNull(document.CareerSection.Intro);
+        foreach (var item in document.CareerSection.Items)
+        {
+            item.Period = EmptyIfNull(item.Period);
+            item.Category = EmptyIfNull(item.Category);
+            item.Organization = EmptyIfNull(item.Organization);
+            item.Title = EmptyIfNull(item.Title);
+            item.Description = EmptyIfNull(item.Description);
+            item.Highlights = EmptyIfNull(item.Highlights);
+        }
+
         document.SkillsSection ??= new SkillsSectionContent();
         document.SkillsSection.Categories ??= [];
+        document.SkillsSection.Heading = EmptyIfNull(document.SkillsSection.Heading);
+        document.SkillsSection.Intro = EmptyIfNull(document.SkillsSection.Intro);
+
         document.WorksSection ??= new WorksSectionContent();
         document.WorksSection.Items ??= [];
+        document.WorksSection.Heading = EmptyIfNull(document.WorksSection.Heading);
+        document.WorksSection.Intro = EmptyIfNull(document.WorksSection.Intro);
+        foreach (var item in document.WorksSection.Items)
+        {
+            item.Title = EmptyIfNull(item.Title);
+            item.Year = EmptyIfNull(item.Year);
+            item.Type = EmptyIfNull(item.Type);
+            item.Role = EmptyIfNull(item.Role);
+            item.Summary = EmptyIfNull(item.Summary);
+            item.Responsibilities = EmptyIfNull(item.Responsibilities);
+            item.Outcomes = EmptyIfNull(item.Outcomes);
+            item.Stack = EmptyIfNull(item.Stack);
+        }
+
         document.PersonalSection ??= new PersonalSectionContent();
         document.PersonalSection.Items ??= [];
+        document.PersonalSection.Heading = EmptyIfNull(document.PersonalSection.Heading);
+        document.PersonalSection.Intro = EmptyIfNull(document.PersonalSection.Intro);
+        foreach (var item in document.PersonalSection.Items)
+        {
+            item.Category = EmptyIfNull(item.Category);
+            item.Title = EmptyIfNull(item.Title);
+            item.Summary = EmptyIfNull(item.Summary);
+            item.Points = EmptyIfNull(item.Points);
+            item.Stack = EmptyIfNull(item.Stack);
+        }
+
         document.Contact ??= new ContactContent();
         document.Contact.Links ??= [];
+        document.Contact.Heading = EmptyIfNull(document.Contact.Heading);
+        document.Contact.Note = EmptyIfNull(document.Contact.Note);
+        document.Contact.Email = EmptyIfNull(document.Contact.Email);
+        foreach (var link in document.Contact.Links)
+        {
+            link.Label = EmptyIfNull(link.Label);
+            link.Href = EmptyIfNull(link.Href);
+        }
 
         foreach (var category in document.SkillsSection.Categories)
         {
             category.Items ??= [];
+            category.Title = EmptyIfNull(category.Title);
+            category.Summary = EmptyIfNull(category.Summary);
+
+            foreach (var item in category.Items)
+            {
+                item.Name = EmptyIfNull(item.Name);
+                item.Experience = EmptyIfNull(item.Experience);
+                item.Note = EmptyIfNull(item.Note);
+            }
         }
 
         return document;
