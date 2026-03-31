@@ -1,6 +1,13 @@
 # Portfolio Site
 
-ASP.NET Core 8 の標準的な MVC 構成へ整理したポートフォリオサイトです。公開ページは Razor View でサーバー描画し、見た目は既存の `HTML / CSS` を維持しています。管理画面は `ASP.NET Core Identity` で保護し、URL は `/admin` のまま維持しています。保存先は MySQL です。
+ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公開ページは Razor View でサーバー描画し、管理画面は `ASP.NET Core Identity` で保護しています。管理 URL は `/admin` のまま維持し、公開コンテンツは JSON ファイルではなく DB テーブルへ保存します。
+
+運用前提は次のとおりです。
+
+- 開発環境: SQLite `LocalData/Debug/portfolio-site.dev.db`
+- 本番想定: MySQL
+- 管理者情報: `appsettings.json` の `AdminAccount`
+- アプリ設定ファイル: DB 接続文字列と管理者設定
 
 ## Structure
 
@@ -10,12 +17,15 @@ ASP.NET Core 8 の標準的な MVC 構成へ整理したポートフォリオサ
 │   ├── AdminController.cs
 │   └── HomeController.cs
 ├── Data/
+│   ├── PortfolioContentCollections.cs
 │   ├── PortfolioContentRecord.cs
+│   ├── PortfolioDatabaseOptions.cs
 │   ├── PortfolioDbContext.cs
 │   └── PortfolioDbContextFactory.cs
 ├── Migrations/
 ├── Models/
 │   ├── Content/
+│   │   └── PortfolioDefaults.cs
 │   ├── Identity/
 │   └── Options/
 ├── Services/
@@ -29,9 +39,10 @@ ASP.NET Core 8 の標準的な MVC 構成へ整理したポートフォリオサ
 ├── wwwroot/
 │   ├── css/
 │   └── js/
+├── LocalData/
 ├── appsettings.json
 ├── appsettings.Development.json
-├── portfolio-seed.json
+├── portfolio-site.sln
 ├── PortfolioSite.csproj
 └── Program.cs
 ```
@@ -42,24 +53,49 @@ ASP.NET Core 8 の標準的な MVC 構成へ整理したポートフォリオサ
 - 管理ポータル: `/admin`
 - 管理ログイン: `/admin/login`
 
-`appsettings*.json` には DB 接続だけを置き、管理者情報は環境変数で渡します。初回起動時に Identity の管理者ユーザーと `Administrator` ロールを自動作成します。
+`appsettings*.json` で DB 接続と管理者設定を読み込みます。初回起動時に `Administrator` ロールと管理者ユーザーを自動作成します。
 
-## Local Run
+## Configuration
 
-1. MySQL で DB とユーザーを作成します。
-2. `appsettings.json` または環境変数で接続文字列を設定します。
-3. 管理者情報の環境変数を設定します。
-4. 起動します。
+- `AdminAccount:LoginId`
+  `/admin/login` で使う管理ログイン ID です。未指定なら `admin` です。
+- `AdminAccount:Password`
+  管理者の平文パスワードです。起動時にアプリ側でハッシュ化して保存します。未指定なら `0000` です。
+- `ConnectionStrings:PortfolioDatabase`
+  開発では SQLite、その他の環境では MySQL を想定します。
+
+## Development Run
+
+VS Code の `F5` と `PortfolioSite` の launch profile は `Development` で起動します。このとき保存先は SQLite `LocalData/Debug/portfolio-site.dev.db` です。ローカル MySQL は不要です。
+
+1. `appsettings.json` の `AdminAccount` を確認します。
+2. 起動します。
 
 ```bash
-export ADMIN_LOGIN_ID=admin
-export ADMIN_PASSWORD_HASH='generated-hash'
 dotnet restore
 dotnet build
+dotnet run --launch-profile PortfolioSite --project PortfolioSite.csproj
+```
+
+起動後の確認先:
+
+- `http://localhost:5078/`
+- `http://localhost:5078/admin/login`
+
+開発環境では起動時に必要なフォルダを自動作成し、SQLite と Identity テーブルも初期化します。旧 JSON スキーマの SQLite ファイルが残っている場合は、一度作り直して新スキーマへ揃えます。
+
+## Production / MySQL Run
+
+1. MySQL で DB とユーザーを作成します。
+2. 接続文字列を `appsettings.json` または `ConnectionStrings__PortfolioDatabase` で設定します。
+3. `appsettings.json` の `AdminAccount` を設定します。
+4. アプリを起動します。
+
+```bash
 dotnet run --project PortfolioSite.csproj
 ```
 
-`launchSettings.json` で `Development` が有効になるため、通常の `dotnet run` で開発設定を使えます。開発環境では `appsettings.Development.json` により SQLite ファイル `LocalData/Debug/portfolio-site.dev.db` を使うため、ローカル MySQL がなくても起動できます。起動時には必要なフォルダごと自動生成し、DB と Identity テーブルも初期化されます。
+MySQL を使う環境では、アプリ起動時に EF Core migration を自動適用します。DB 自体の作成はアプリでは行わないので、先に MySQL 側で作成してください。
 
 ## MySQL Example
 
@@ -83,28 +119,45 @@ FLUSH PRIVILEGES;
 
 本番では環境変数 `ConnectionStrings__PortfolioDatabase` で上書きする構成を想定しています。
 
-## Password Hash
+管理者設定の例:
 
-管理者パスワードのハッシュは次で生成できます。生成される値は `ASP.NET Core Identity` 互換です。
-
-```bash
-dotnet run --project PortfolioSite.csproj -- hash-password "your-password"
+```json
+{
+  "AdminAccount": {
+    "LoginId": "admin",
+    "Password": "0000"
+  }
+}
 ```
 
-生成した値を `ADMIN_PASSWORD_HASH` へ設定してください。`ADMIN_LOGIN_ID` は省略時 `admin` で、必要なら `/admin/login` に使うログイン ID を上書きできます。
+## Data Model
 
-## Data Flow
+公開コンテンツは次のテーブルへ保存します。
 
-- DB テーブルは `portfolio_contents` 1 テーブルです
-- 保存内容はポートフォリオ全体の JSON ドキュメントです
-- 初回起動時に migration を適用し、Identity の管理者ユーザーとロールを作成します
-- 保存データが空なら `portfolio-seed.json` を投入します
-- 管理画面では JSON をそのまま編集、import、export、reset できます
+- `portfolio_contents`
+- `portfolio_profile_highlights`
+- `portfolio_career_items`
+- `portfolio_skill_categories`
+- `portfolio_skill_items`
+- `portfolio_work_items`
+- `portfolio_personal_items`
+- `portfolio_contact_links`
+
+認証系は `AspNetUsers`、`AspNetRoles` などの `Identity` テーブルを使います。
+
+初回起動時の挙動:
+
+- DB が空なら [PortfolioDefaults.cs](./Models/Content/PortfolioDefaults.cs) の初期データを投入
+- 管理者ロールと管理者ユーザーを自動作成
+- 管理画面のフォーム送信内容を DB に直接保存
+
+旧 JSON 保存から移行する場合は migration `NormalizePortfolioContent` が `portfolio_contents.JsonContent` から新スキーマへ移し替えます。通常運用では JSON ファイルも JSON blob 保存も使いません。
 
 ## Notes
 
 - 旧 `public/` 配下の静的 HTML と API 用 JavaScript は削除し、`Views/` と `wwwroot/` へ統合しています
 - API エンドポイントは持ちません
-- DB 自体の作成はアプリでは行いません。事前に MySQL 側で作成してください
+- `LocalData/` 配下の開発用 DB はローカル専用で、Git には含めません
 - `/admin` の保護は Identity の Cookie 認証で行い、失敗 5 回で 15 分ロックされます
-- 管理者情報は `appsettings*.json` には置かず、`ADMIN_LOGIN_ID` と `ADMIN_PASSWORD_HASH` の環境変数で渡します
+- 管理者情報は `appsettings.json` の `AdminAccount` で管理します
+- 管理画面は JSON import / export ではなく、各項目をフォーム編集して保存する構成です

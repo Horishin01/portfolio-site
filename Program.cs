@@ -5,34 +5,18 @@ using PortfolioSite.Models.Identity;
 using PortfolioSite.Models.Options;
 using PortfolioSite.Services;
 
-if (args.Length > 0 && string.Equals(args[0], "hash-password", StringComparison.OrdinalIgnoreCase))
-{
-    var password = args.Length > 1 ? args[1] : PromptPassword();
-
-    if (string.IsNullOrWhiteSpace(password))
-    {
-        throw new InvalidOperationException("Password is required.");
-    }
-
-    var passwordHasher = new PasswordHasher<AdminUser>();
-    Console.WriteLine(passwordHasher.HashPassword(new AdminUser(), password));
-    return;
-}
-
 var builder = WebApplication.CreateBuilder(args);
-
-var adminLoginId = builder.Configuration["ADMIN_LOGIN_ID"];
-var adminPasswordHash = builder.Configuration["ADMIN_PASSWORD_HASH"];
 
 builder.Services
     .AddOptions<AdminAccountOptions>()
-    .Configure(options =>
+    .Bind(builder.Configuration.GetSection("AdminAccount"))
+    .PostConfigure(options =>
     {
-        options.LoginId = string.IsNullOrWhiteSpace(adminLoginId) ? "admin" : adminLoginId.Trim();
-        options.PasswordHash = adminPasswordHash?.Trim() ?? "";
+        options.LoginId = string.IsNullOrWhiteSpace(options.LoginId) ? "admin" : options.LoginId.Trim();
+        options.Password = string.IsNullOrWhiteSpace(options.Password) ? "0000" : options.Password.Trim();
     })
-    .Validate(options => !string.IsNullOrWhiteSpace(options.LoginId), "ADMIN_LOGIN_ID must not be empty.")
-    .Validate(options => !string.IsNullOrWhiteSpace(options.PasswordHash), "ADMIN_PASSWORD_HASH is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.LoginId), "AdminAccount:LoginId must not be empty.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "AdminAccount:Password must not be empty.")
     .ValidateOnStart();
 
 var connectionString = builder.Configuration.GetConnectionString("PortfolioDatabase")
@@ -99,9 +83,3 @@ app.MapControllerRoute(
 );
 
 app.Run();
-
-static string PromptPassword()
-{
-    Console.Write("Password: ");
-    return Console.ReadLine()?.Trim() ?? "";
-}

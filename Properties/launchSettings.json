@@ -7,9 +7,7 @@
       "launchBrowser": true,
       "applicationUrl": "http://localhost:5078",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "ADMIN_LOGIN_ID": "admin",
-        "ADMIN_PASSWORD_HASH": "AQAAAAIAAYagAAAAEFcEgy07tuTAsnHf5YxiA/ziZeBz2Q1rq1OraUIU6EckDA9XIERnYHPr4CqFNBnZ/g=="
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   }

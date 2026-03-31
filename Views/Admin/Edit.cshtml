@@ -10,12 +10,15 @@
         .SelectMany(value => value.Errors)
         .FirstOrDefault()
         ?.ErrorMessage;
-    var statusMessage = validationMessage ?? tempMessage ?? "JSON を編集して保存してください。";
+    var statusMessage = validationMessage ?? tempMessage ?? "フォームを編集して保存してください。";
     var statusClass = hasErrors
         ? "is-error"
         : tone is "success" ? "is-success"
         : tone is "warning" ? "is-warning"
         : string.Empty;
+    var doc = Model.Document;
+    var hasHeroImage = !string.IsNullOrWhiteSpace(doc.Profile.HeroImageSrc);
+    var heroMark = string.IsNullOrWhiteSpace(doc.Profile.ShortName) ? "IMG" : doc.Profile.ShortName;
 }
 <div class="admin-shell is-visible" id="adminShell">
   <header class="admin-header">
@@ -23,7 +26,7 @@
       <p class="admin-eyebrow">Portfolio Admin</p>
       <h1>管理画面</h1>
       <p class="admin-note">
-        API は使わず、ASP.NET Core MVC のフォーム送信で JSON ドキュメントを更新します。
+        ASP.NET Core MVC のフォーム送信で、ポートフォリオ本体を DB テーブルへ保存します。
       </p>
     </div>
 
@@ -39,7 +42,7 @@
 
   <section class="admin-toolbar">
     <div class="toolbar-group">
-      <a class="button button-secondary" asp-action="Export">JSON 出力</a>
+      <span class="field-help">最終更新: @Model.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")</span>
     </div>
     <div class="toolbar-group">
       <form asp-action="Reset" method="post" class="inline-form" data-confirm="初期データへ戻します。現在の保存内容は上書きされます。">
@@ -50,73 +53,492 @@
 
   <p class="status-message @statusClass">@statusMessage</p>
 
-  <main class="admin-layout">
-    <section class="admin-section">
-      <div class="section-header">
-        <p class="section-eyebrow">Summary</p>
-        <h2>現在の情報</h2>
-        <p class="section-description">
-          保存対象のタイトルと概要です。最終更新は UTC 表記です。
-        </p>
-      </div>
-      <div class="admin-section-content">
-        <div class="field-grid">
-          <div class="field">
-            <label>Site Title</label>
-            <input value="@Model.SiteTitle" readonly />
-          </div>
-          <div class="field">
-            <label>Updated At</label>
-            <input value="@Model.UpdatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")" readonly />
-          </div>
-          <div class="field field-full">
-            <label>Meta Description</label>
-            <textarea readonly>@Model.MetaDescription</textarea>
+  <form id="editorForm" asp-action="Edit" method="post">
+    <main class="admin-layout">
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Site</p>
+          <h2>基本設定</h2>
+          <p class="section-description">
+            サイト全体のメタ情報です。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field-grid">
+            <div class="field">
+              <label asp-for="Document.Locale"></label>
+              <input asp-for="Document.Locale" />
+            </div>
+            <div class="field">
+              <label asp-for="Document.FooterRole"></label>
+              <input asp-for="Document.FooterRole" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.SiteTitle"></label>
+              <input asp-for="Document.SiteTitle" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.MetaDescription"></label>
+              <textarea asp-for="Document.MetaDescription"></textarea>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section class="admin-section">
-      <div class="section-header">
-        <p class="section-eyebrow">Editor</p>
-        <h2>Portfolio JSON</h2>
-        <p class="section-description">
-          `portfolio-seed.json` と同じ構造の JSON をそのまま編集します。
-        </p>
-      </div>
-      <div class="admin-section-content">
-        <form id="editorForm" asp-action="Edit" method="post">
-          <div class="field-grid is-single">
-            <div class="field field-full">
-              <label asp-for="JsonContent"></label>
-              <textarea asp-for="JsonContent" class="json-editor"></textarea>
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Hero</p>
+          <h2>プロフィール</h2>
+          <p class="section-description">
+            ファーストビューとプロフィール基本情報です。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field image-field">
+            <label>Hero Image Preview</label>
+            <div class="image-field-shell">
+              <div class="image-preview-card @(hasHeroImage ? "has-image" : string.Empty)">
+                @if (hasHeroImage)
+                {
+                    <img class="image-preview-media" src="@doc.Profile.HeroImageSrc" alt="@doc.Profile.HeroImageAlt" />
+                }
+                <div class="image-preview-placeholder">
+                  <span class="image-preview-mark">@heroMark</span>
+                  <div class="image-preview-copy">
+                    <strong>Hero Image</strong>
+                    <p>画像 URL を指定すると、ここにプレビューされます。</p>
+                  </div>
+                </div>
+              </div>
+              <div class="image-field-controls">
+                <div class="field-grid">
+                  <div class="field">
+                    <label asp-for="Document.Profile.Name"></label>
+                    <input asp-for="Document.Profile.Name" />
+                  </div>
+                  <div class="field">
+                    <label asp-for="Document.Profile.ShortName"></label>
+                    <input asp-for="Document.Profile.ShortName" />
+                  </div>
+                  <div class="field">
+                    <label asp-for="Document.Profile.Role"></label>
+                    <input asp-for="Document.Profile.Role" />
+                  </div>
+                  <div class="field">
+                    <label asp-for="Document.Profile.HeroEyebrow"></label>
+                    <input asp-for="Document.Profile.HeroEyebrow" />
+                  </div>
+                  <div class="field field-full">
+                    <label asp-for="Document.Profile.HeroTitle"></label>
+                    <input asp-for="Document.Profile.HeroTitle" />
+                  </div>
+                  <div class="field field-full">
+                    <label asp-for="Document.Profile.HeroImageSrc"></label>
+                    <input asp-for="Document.Profile.HeroImageSrc" />
+                  </div>
+                  <div class="field field-full">
+                    <label asp-for="Document.Profile.HeroImageAlt"></label>
+                    <input asp-for="Document.Profile.HeroImageAlt" />
+                  </div>
+                  <div class="field field-full">
+                    <label asp-for="Document.Profile.Summary"></label>
+                    <textarea asp-for="Document.Profile.Summary"></textarea>
+                  </div>
+                  <div class="field field-full">
+                    <label asp-for="Document.Profile.Tags"></label>
+                    <textarea asp-for="Document.Profile.Tags"></textarea>
+                    <p class="field-help">1 行 1 要素で入力します。</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </form>
-      </div>
-    </section>
 
-    <section class="admin-section">
-      <div class="section-header">
-        <p class="section-eyebrow">Import</p>
-        <h2>JSON 読み込み</h2>
-        <p class="section-description">
-          手元の JSON をそのまま保存データへ反映します。
-        </p>
-      </div>
-      <div class="admin-section-content">
-        <form asp-action="Import" method="post" enctype="multipart/form-data">
-          <div class="field-grid is-single">
-            <div class="field field-full">
-              <label for="uploadedFile">JSON ファイル</label>
-              <input id="uploadedFile" name="uploadedFile" type="file" accept="application/json" required />
-              <p class="field-help">構造が不正な場合は保存されません。</p>
+          <div class="collection">
+            <div class="collection-header">
+              <div>
+                <p class="section-eyebrow">Highlights</p>
+                <h3>プロフィール指標</h3>
+              </div>
+            </div>
+            <div class="item-list">
+              @for (var i = 0; i < doc.Profile.Highlights.Count; i++)
+              {
+                  <article class="item-card">
+                    <div class="item-card-header">
+                      <h4>Highlight @(i + 1)</h4>
+                    </div>
+                    <div class="field-grid">
+                      <div class="field">
+                        <label asp-for="Document.Profile.Highlights[i].Label"></label>
+                        <input asp-for="Document.Profile.Highlights[i].Label" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.Profile.Highlights[i].Value"></label>
+                        <input asp-for="Document.Profile.Highlights[i].Value" />
+                      </div>
+                    </div>
+                  </article>
+              }
             </div>
           </div>
-          <button class="button button-secondary" type="submit">JSON を読み込む</button>
-        </form>
-      </div>
-    </section>
-  </main>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Profile</p>
+          <h2>自己紹介セクション</h2>
+          <p class="section-description">
+            PROFILE エリアの本文と補足情報です。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field-grid">
+            <div class="field">
+              <label asp-for="Document.ProfileSection.Heading"></label>
+              <input asp-for="Document.ProfileSection.Heading" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.ProfileSection.Intro"></label>
+              <textarea asp-for="Document.ProfileSection.Intro"></textarea>
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.ProfileSection.Lead"></label>
+              <textarea asp-for="Document.ProfileSection.Lead"></textarea>
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.ProfileSection.Body"></label>
+              <textarea asp-for="Document.ProfileSection.Body"></textarea>
+            </div>
+            <div class="field">
+              <label asp-for="Document.ProfileSection.FocusHeading"></label>
+              <input asp-for="Document.ProfileSection.FocusHeading" />
+            </div>
+            <div class="field">
+              <label asp-for="Document.ProfileSection.CertificationsHeading"></label>
+              <input asp-for="Document.ProfileSection.CertificationsHeading" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.ProfileSection.FocusItems"></label>
+              <textarea asp-for="Document.ProfileSection.FocusItems"></textarea>
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.ProfileSection.Certifications"></label>
+              <textarea asp-for="Document.ProfileSection.Certifications"></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Career</p>
+          <h2>在籍歴</h2>
+          <p class="section-description">
+            Career セクションの見出しと各項目です。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field-grid">
+            <div class="field">
+              <label asp-for="Document.CareerSection.Heading"></label>
+              <input asp-for="Document.CareerSection.Heading" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.CareerSection.Intro"></label>
+              <textarea asp-for="Document.CareerSection.Intro"></textarea>
+            </div>
+          </div>
+
+          <div class="collection">
+            <div class="collection-header">
+              <div>
+                <p class="section-eyebrow">Items</p>
+                <h3>Career Items</h3>
+              </div>
+            </div>
+            <div class="item-list">
+              @for (var i = 0; i < doc.CareerSection.Items.Count; i++)
+              {
+                  <article class="item-card">
+                    <div class="item-card-header">
+                      <h4>Career @(i + 1)</h4>
+                    </div>
+                    <div class="field-grid">
+                      <div class="field">
+                        <label asp-for="Document.CareerSection.Items[i].Period"></label>
+                        <input asp-for="Document.CareerSection.Items[i].Period" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.CareerSection.Items[i].Category"></label>
+                        <input asp-for="Document.CareerSection.Items[i].Category" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.CareerSection.Items[i].Organization"></label>
+                        <input asp-for="Document.CareerSection.Items[i].Organization" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.CareerSection.Items[i].Title"></label>
+                        <input asp-for="Document.CareerSection.Items[i].Title" />
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.CareerSection.Items[i].Description"></label>
+                        <textarea asp-for="Document.CareerSection.Items[i].Description"></textarea>
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.CareerSection.Items[i].Highlights"></label>
+                        <textarea asp-for="Document.CareerSection.Items[i].Highlights"></textarea>
+                      </div>
+                    </div>
+                  </article>
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Skills</p>
+          <h2>スキル</h2>
+          <p class="section-description">
+            カテゴリごとにスキルを管理します。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field-grid">
+            <div class="field">
+              <label asp-for="Document.SkillsSection.Heading"></label>
+              <input asp-for="Document.SkillsSection.Heading" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.SkillsSection.Intro"></label>
+              <textarea asp-for="Document.SkillsSection.Intro"></textarea>
+            </div>
+          </div>
+
+          <div class="collection">
+            <div class="collection-header">
+              <div>
+                <p class="section-eyebrow">Categories</p>
+                <h3>Skill Categories</h3>
+              </div>
+            </div>
+            <div class="item-list">
+              @for (var categoryIndex = 0; categoryIndex < doc.SkillsSection.Categories.Count; categoryIndex++)
+              {
+                  <article class="item-card">
+                    <div class="item-card-header">
+                      <h4>Category @(categoryIndex + 1)</h4>
+                    </div>
+                    <div class="field-grid">
+                      <div class="field">
+                        <label asp-for="Document.SkillsSection.Categories[categoryIndex].Title"></label>
+                        <input asp-for="Document.SkillsSection.Categories[categoryIndex].Title" />
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.SkillsSection.Categories[categoryIndex].Summary"></label>
+                        <textarea asp-for="Document.SkillsSection.Categories[categoryIndex].Summary"></textarea>
+                      </div>
+                    </div>
+
+                    <div class="nested-list">
+                      @for (var itemIndex = 0; itemIndex < doc.SkillsSection.Categories[categoryIndex].Items.Count; itemIndex++)
+                      {
+                          <div class="nested-item">
+                            <div class="field-grid">
+                              <div class="field">
+                                <label asp-for="Document.SkillsSection.Categories[categoryIndex].Items[itemIndex].Name"></label>
+                                <input asp-for="Document.SkillsSection.Categories[categoryIndex].Items[itemIndex].Name" />
+                              </div>
+                              <div class="field">
+                                <label asp-for="Document.SkillsSection.Categories[categoryIndex].Items[itemIndex].Experience"></label>
+                                <input asp-for="Document.SkillsSection.Categories[categoryIndex].Items[itemIndex].Experience" />
+                              </div>
+                              <div class="field field-full">
+                                <label asp-for="Document.SkillsSection.Categories[categoryIndex].Items[itemIndex].Note"></label>
+                                <textarea asp-for="Document.SkillsSection.Categories[categoryIndex].Items[itemIndex].Note"></textarea>
+                              </div>
+                            </div>
+                          </div>
+                      }
+                    </div>
+                  </article>
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Works</p>
+          <h2>実績</h2>
+          <p class="section-description">
+            実績カードを順番どおりに編集します。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field-grid">
+            <div class="field">
+              <label asp-for="Document.WorksSection.Heading"></label>
+              <input asp-for="Document.WorksSection.Heading" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.WorksSection.Intro"></label>
+              <textarea asp-for="Document.WorksSection.Intro"></textarea>
+            </div>
+          </div>
+
+          <div class="item-list">
+            @for (var i = 0; i < doc.WorksSection.Items.Count; i++)
+            {
+                <article class="item-card">
+                  <div class="item-card-header">
+                    <h4>Work @(i + 1)</h4>
+                  </div>
+                  <div class="field-grid">
+                    <div class="field">
+                      <label asp-for="Document.WorksSection.Items[i].Title"></label>
+                      <input asp-for="Document.WorksSection.Items[i].Title" />
+                    </div>
+                    <div class="field">
+                      <label asp-for="Document.WorksSection.Items[i].Year"></label>
+                      <input asp-for="Document.WorksSection.Items[i].Year" />
+                    </div>
+                    <div class="field">
+                      <label asp-for="Document.WorksSection.Items[i].Type"></label>
+                      <input asp-for="Document.WorksSection.Items[i].Type" />
+                    </div>
+                    <div class="field">
+                      <label asp-for="Document.WorksSection.Items[i].Role"></label>
+                      <input asp-for="Document.WorksSection.Items[i].Role" />
+                    </div>
+                    <div class="field field-full">
+                      <label asp-for="Document.WorksSection.Items[i].Summary"></label>
+                      <textarea asp-for="Document.WorksSection.Items[i].Summary"></textarea>
+                    </div>
+                    <div class="field field-full">
+                      <label asp-for="Document.WorksSection.Items[i].Responsibilities"></label>
+                      <textarea asp-for="Document.WorksSection.Items[i].Responsibilities"></textarea>
+                    </div>
+                    <div class="field field-full">
+                      <label asp-for="Document.WorksSection.Items[i].Outcomes"></label>
+                      <textarea asp-for="Document.WorksSection.Items[i].Outcomes"></textarea>
+                    </div>
+                    <div class="field field-full">
+                      <label asp-for="Document.WorksSection.Items[i].Stack"></label>
+                      <textarea asp-for="Document.WorksSection.Items[i].Stack"></textarea>
+                    </div>
+                  </div>
+                </article>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Personal</p>
+          <h2>個人活動</h2>
+          <p class="section-description">
+            PERSONAL セクションのカードを管理します。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field-grid">
+            <div class="field">
+              <label asp-for="Document.PersonalSection.Heading"></label>
+              <input asp-for="Document.PersonalSection.Heading" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.PersonalSection.Intro"></label>
+              <textarea asp-for="Document.PersonalSection.Intro"></textarea>
+            </div>
+          </div>
+
+          <div class="item-list">
+            @for (var i = 0; i < doc.PersonalSection.Items.Count; i++)
+            {
+                <article class="item-card">
+                  <div class="item-card-header">
+                    <h4>Personal @(i + 1)</h4>
+                  </div>
+                  <div class="field-grid">
+                    <div class="field">
+                      <label asp-for="Document.PersonalSection.Items[i].Category"></label>
+                      <input asp-for="Document.PersonalSection.Items[i].Category" />
+                    </div>
+                    <div class="field">
+                      <label asp-for="Document.PersonalSection.Items[i].Title"></label>
+                      <input asp-for="Document.PersonalSection.Items[i].Title" />
+                    </div>
+                    <div class="field field-full">
+                      <label asp-for="Document.PersonalSection.Items[i].Summary"></label>
+                      <textarea asp-for="Document.PersonalSection.Items[i].Summary"></textarea>
+                    </div>
+                    <div class="field field-full">
+                      <label asp-for="Document.PersonalSection.Items[i].Points"></label>
+                      <textarea asp-for="Document.PersonalSection.Items[i].Points"></textarea>
+                    </div>
+                    <div class="field field-full">
+                      <label asp-for="Document.PersonalSection.Items[i].Stack"></label>
+                      <textarea asp-for="Document.PersonalSection.Items[i].Stack"></textarea>
+                    </div>
+                  </div>
+                </article>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-section">
+        <div class="section-header">
+          <p class="section-eyebrow">Contact</p>
+          <h2>連絡先</h2>
+          <p class="section-description">
+            CONTACT セクションと外部リンクです。
+          </p>
+        </div>
+        <div class="admin-section-content">
+          <div class="field-grid">
+            <div class="field">
+              <label asp-for="Document.Contact.Heading"></label>
+              <input asp-for="Document.Contact.Heading" />
+            </div>
+            <div class="field">
+              <label asp-for="Document.Contact.Email"></label>
+              <input asp-for="Document.Contact.Email" />
+            </div>
+            <div class="field field-full">
+              <label asp-for="Document.Contact.Note"></label>
+              <textarea asp-for="Document.Contact.Note"></textarea>
+            </div>
+          </div>
+
+          <div class="item-list">
+            @for (var i = 0; i < doc.Contact.Links.Count; i++)
+            {
+                <article class="item-card">
+                  <div class="item-card-header">
+                    <h4>Link @(i + 1)</h4>
+                  </div>
+                  <div class="field-grid">
+                    <div class="field">
+                      <label asp-for="Document.Contact.Links[i].Label"></label>
+                      <input asp-for="Document.Contact.Links[i].Label" />
+                    </div>
+                    <div class="field">
+                      <label asp-for="Document.Contact.Links[i].Href"></label>
+                      <input asp-for="Document.Contact.Links[i].Href" />
+                    </div>
+                  </div>
+                </article>
+            }
+          </div>
+        </div>
+      </section>
+    </main>
+  </form>
 </div>

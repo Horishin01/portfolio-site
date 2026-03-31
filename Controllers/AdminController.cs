@@ -102,14 +102,16 @@ public sealed class AdminController : Controller
     [HttpPost("edit")]
     public async Task<IActionResult> Edit(PortfolioEditorViewModel model, CancellationToken cancellationToken)
     {
+        model.Normalize();
+
         if (!ModelState.IsValid)
         {
-            return View(await BuildEditorViewModelAsync(cancellationToken, model.JsonContent));
+            return View(model);
         }
 
         try
         {
-            await _contentService.SaveJsonAsync(model.JsonContent, cancellationToken);
+            await _contentService.SaveAsync(model.Document, cancellationToken);
             TempData["StatusMessage"] = "ポートフォリオを保存しました。";
             TempData["StatusTone"] = "success";
 
@@ -117,8 +119,8 @@ public sealed class AdminController : Controller
         }
         catch (Exception ex)
         {
-            ModelState.AddModelError(string.Empty, $"JSON の保存に失敗しました: {ex.Message}");
-            return View(await BuildEditorViewModelAsync(cancellationToken, model.JsonContent));
+            ModelState.AddModelError(string.Empty, $"保存に失敗しました: {ex.Message}");
+            return View(model);
         }
     }
 
@@ -127,50 +129,9 @@ public sealed class AdminController : Controller
     [HttpPost("reset")]
     public async Task<IActionResult> Reset(CancellationToken cancellationToken)
     {
-        await _contentService.ResetToSeedAsync(cancellationToken);
+        await _contentService.ResetToDefaultAsync(cancellationToken);
         TempData["StatusMessage"] = "初期データに戻しました。";
         TempData["StatusTone"] = "warning";
-        return RedirectToAction(nameof(Edit));
-    }
-
-    [Authorize]
-    [HttpGet("export")]
-    public async Task<IActionResult> Export(CancellationToken cancellationToken)
-    {
-        var json = await _contentService.ExportJsonAsync(cancellationToken);
-        var bytes = System.Text.Encoding.UTF8.GetBytes(json);
-        var fileName = $"portfolio-{DateTime.UtcNow:yyyyMMddHHmmss}.json";
-        return File(bytes, "application/json", fileName);
-    }
-
-    [Authorize]
-    [ValidateAntiForgeryToken]
-    [HttpPost("import")]
-    public async Task<IActionResult> Import(IFormFile? uploadedFile, CancellationToken cancellationToken)
-    {
-        if (uploadedFile is null || uploadedFile.Length == 0)
-        {
-            TempData["StatusMessage"] = "読み込む JSON ファイルを選択してください。";
-            TempData["StatusTone"] = "error";
-            return RedirectToAction(nameof(Edit));
-        }
-
-        using var stream = uploadedFile.OpenReadStream();
-        using var reader = new StreamReader(stream);
-        var json = await reader.ReadToEndAsync(cancellationToken);
-
-        try
-        {
-            await _contentService.SaveJsonAsync(json, cancellationToken);
-            TempData["StatusMessage"] = "JSON を読み込みました。";
-            TempData["StatusTone"] = "success";
-        }
-        catch (Exception ex)
-        {
-            TempData["StatusMessage"] = $"JSON の読み込みに失敗しました: {ex.Message}";
-            TempData["StatusTone"] = "error";
-        }
-
         return RedirectToAction(nameof(Edit));
     }
 
@@ -183,18 +144,9 @@ public sealed class AdminController : Controller
         return RedirectToAction(nameof(Login));
     }
 
-    private async Task<PortfolioEditorViewModel> BuildEditorViewModelAsync(
-        CancellationToken cancellationToken,
-        string? jsonOverride = null
-    )
+    private async Task<PortfolioEditorViewModel> BuildEditorViewModelAsync(CancellationToken cancellationToken)
     {
         var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
-        return new PortfolioEditorViewModel
-        {
-            JsonContent = jsonOverride ?? snapshot.JsonContent,
-            SiteTitle = snapshot.Document.SiteTitle,
-            MetaDescription = snapshot.Document.MetaDescription,
-            UpdatedAtUtc = snapshot.UpdatedAtUtc
-        };
+        return PortfolioEditorViewModel.FromSnapshot(snapshot);
     }
 }

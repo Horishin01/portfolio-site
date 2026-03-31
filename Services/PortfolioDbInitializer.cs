@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
+using System.Data;
 using PortfolioSite.Data;
 using PortfolioSite.Models.Identity;
 using PortfolioSite.Models.Options;
@@ -14,12 +15,14 @@ public sealed class PortfolioDbInitializer
     private readonly AdminAccountOptions _adminAccountOptions;
     private readonly PortfolioContentService _contentService;
     private readonly PortfolioDbContext _dbContext;
+    private readonly IPasswordHasher<AdminUser> _passwordHasher;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly UserManager<AdminUser> _userManager;
 
     public PortfolioDbInitializer(
         PortfolioContentService contentService,
         PortfolioDbContext dbContext,
+        IPasswordHasher<AdminUser> passwordHasher,
         UserManager<AdminUser> userManager,
         RoleManager<IdentityRole> roleManager,
         IOptions<AdminAccountOptions> adminAccountOptionsAccessor
@@ -28,6 +31,7 @@ public sealed class PortfolioDbInitializer
         _adminAccountOptions = adminAccountOptionsAccessor.Value;
         _contentService = contentService;
         _dbContext = dbContext;
+        _passwordHasher = passwordHasher;
         _roleManager = roleManager;
         _userManager = userManager;
     }
@@ -36,6 +40,11 @@ public sealed class PortfolioDbInitializer
     {
         if (_dbContext.Database.IsSqlite())
         {
+            if (await HasLegacyJsonSchemaAsync(cancellationToken))
+            {
+                await _dbContext.Database.EnsureDeletedAsync(cancellationToken);
+            }
+
             await _dbContext.Database.EnsureCreatedAsync(cancellationToken);
         }
         else
@@ -47,7 +56,34 @@ public sealed class PortfolioDbInitializer
 
         if (!await _contentService.HasContentAsync(cancellationToken))
         {
-            await _contentService.ResetToSeedAsync(cancellationToken);
+            await _contentService.ResetToDefaultAsync(cancellationToken);
+        }
+    }
+
+    private async Task<bool> HasLegacyJsonSchemaAsync(CancellationToken cancellationToken)
+    {
+        var connection = _dbContext.Database.GetDbConnection();
+        var openedHere = false;
+
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync(cancellationToken);
+            openedHere = true;
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT 1 FROM pragma_table_info('portfolio_contents') WHERE name = 'JsonContent' LIMIT 1;";
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result is not null && result != DBNull.Value;
+        }
+        finally
+        {
+            if (openedHere)
+            {
+                await connection.CloseAsync();
+            }
         }
     }
 
@@ -68,9 +104,9 @@ public sealed class PortfolioDbInitializer
             {
                 Id = BootstrapAdminUserId,
                 UserName = _adminAccountOptions.LoginId,
-                LockoutEnabled = true,
-                PasswordHash = _adminAccountOptions.PasswordHash
+                LockoutEnabled = true
             };
+            user.PasswordHash = _passwordHasher.HashPassword(user, _adminAccountOptions.Password);
 
             var createUserResult = await _userManager.CreateAsync(user);
             EnsureSucceeded(createUserResult, "admin user");
@@ -85,9 +121,13 @@ public sealed class PortfolioDbInitializer
                 shouldUpdate = true;
             }
 
-            if (!string.Equals(user.PasswordHash, _adminAccountOptions.PasswordHash, StringComparison.Ordinal))
+            var passwordVerification = string.IsNullOrWhiteSpace(user.PasswordHash)
+                ? PasswordVerificationResult.Failed
+                : _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, _adminAccountOptions.Password);
+
+            if (passwordVerification != PasswordVerificationResult.Success)
             {
-                user.PasswordHash = _adminAccountOptions.PasswordHash;
+                user.PasswordHash = _passwordHasher.HashPassword(user, _adminAccountOptions.Password);
                 user.SecurityStamp = Guid.NewGuid().ToString();
                 shouldUpdate = true;
             }
