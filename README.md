@@ -63,6 +63,8 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
   管理者の平文パスワードです。起動時にアプリ側でハッシュ化して保存します。未指定なら `0000` です。
 - `ConnectionStrings:PortfolioDatabase`
   開発では SQLite、その他の環境では MySQL を想定します。
+- `ReverseProxy:TrustAllProxies`
+  Docker や別ホストのリバースプロキシから `X-Forwarded-*` を受ける場合に `true` を設定します。同一ホスト上の Nginx から `127.0.0.1` 経由で流す構成なら通常は不要です。
 
 ## Development Run
 
@@ -96,6 +98,38 @@ dotnet run --project PortfolioSite.csproj
 ```
 
 MySQL を使う環境では、アプリ起動時に EF Core migration を自動適用します。DB 自体の作成はアプリでは行わないので、先に MySQL 側で作成してください。
+
+## Ubuntu Server Deploy
+
+Ubuntu Server では `systemd + Nginx` の構成を前提にすると扱いやすいです。アプリ側は `X-Forwarded-*` を解釈するようにしてあるため、Nginx の背後でも `https` 判定が崩れません。
+
+1. .NET 8 SDK または Runtime をインストールします。
+2. 任意の配置先へ publish します。
+3. `www-data` など実行ユーザーがアプリ配置先を読めること、必要なら `wwwroot/uploads/` に書き込めることを確認します。
+4. `deploy/ubuntu/portfolio-site.service.example` を `/etc/systemd/system/portfolio-site.service` として配置し、環境変数を実値へ置き換えます。
+5. `deploy/ubuntu/nginx-portfolio-site.conf.example` を Nginx 設定へコピーして `server_name` を変更します。
+6. `systemctl daemon-reload` と `systemctl enable --now portfolio-site` を実行します。
+7. `nginx -t` の後に `systemctl reload nginx` を実行します。
+
+publish 例:
+
+```bash
+dotnet restore
+dotnet publish PortfolioSite.csproj -c Release -o /var/www/portfolio-site/current
+```
+
+systemd / Nginx のサンプル:
+
+- `deploy/ubuntu/portfolio-site.service.example`
+- `deploy/ubuntu/nginx-portfolio-site.conf.example`
+
+別コンテナや別ホストのプロキシから転送する場合は、必要に応じて次を設定してください。
+
+```bash
+export ReverseProxy__TrustAllProxies=true
+```
+
+この設定は信頼できる内部ネットワーク上のリバースプロキシに限定して使ってください。
 
 ## MySQL Example
 

@@ -3,8 +3,52 @@
     Layout = "_AdminLayout";
     ViewData["Title"] = "ポートフォリオ編集";
 
-    var tone = TempData["StatusTone"] as string;
-    var tempMessage = TempData["StatusMessage"] as string;
+    static HashSet<string> SplitSelectionValues(string? value)
+    {
+        return (value ?? string.Empty)
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.TrimStart('-', '*', '+', ' '))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    static List<string> BuildSelectionOptions(IReadOnlyList<string> baseOptions, string? currentValue)
+    {
+        var options = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var option in baseOptions)
+        {
+            if (seen.Add(option))
+            {
+                options.Add(option);
+            }
+        }
+
+        foreach (var option in SplitSelectionValues(currentValue))
+        {
+            if (seen.Add(option))
+            {
+                options.Add(option);
+            }
+        }
+
+        return options;
+    }
+
+    static List<string> GetAdditionalTagOptions(IEnumerable<string> currentEntries)
+    {
+        return currentEntries
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Where(item => !PortfolioEditorOptionCatalog.KnownProfileTags.Contains(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    var tone = ViewData["StatusTone"] as string ?? TempData["StatusTone"] as string;
+    var tempMessage = ViewData["StatusMessage"] as string ?? TempData["StatusMessage"] as string;
     var hasErrors = !ViewData.ModelState.IsValid;
     var validationMessage = ValidationMessageLocalizer.GetFirstError(ViewData.ModelState);
     var statusMessage = validationMessage ?? tempMessage ?? "フォームを編集して保存してください。";
@@ -35,6 +79,7 @@
         ("personal-panel", "個人", "個人活動"),
         ("contact-panel", "連絡", "連絡先")
     };
+    var additionalProfileTagOptions = GetAdditionalTagOptions(Model.ProfileTagEntries);
 }
 <div class="admin-shell is-visible" id="adminShell">
   <header class="admin-header">
@@ -266,9 +311,47 @@
                     <textarea asp-for="Document.Profile.Summary"></textarea>
                   </div>
                   <div class="field field-full">
-                    <label asp-for="Document.Profile.Tags"></label>
-                    <textarea asp-for="Document.Profile.Tags"></textarea>
-                    <p class="field-help">1 行 1 要素で入力します。</p>
+                    <div class="field-inline-header">
+                      <label>タグ</label>
+                      <button class="button button-secondary" type="submit" name="editorAction" value="add:profile-tag">タグを追加</button>
+                    </div>
+                    <div class="dynamic-entry-list">
+                      @if (Model.ProfileTagEntries.Count == 0)
+                      {
+                          <p class="empty-message">タグはまだありません。追加してから候補を選択してください。</p>
+                      }
+                      @for (var i = 0; i < Model.ProfileTagEntries.Count; i++)
+                      {
+                          <div class="dynamic-entry-row">
+                            <div class="field field-compact">
+                              <label for="profile-tag-entry-@i">タグ @(i + 1)</label>
+                              <select id="profile-tag-entry-@i" name="ProfileTagEntries[@i]">
+                                <option value="">項目を選択してください</option>
+                                @foreach (var group in PortfolioEditorOptionCatalog.ProfileTagGroups)
+                                {
+                                    <optgroup label="@group.Label">
+                                      @foreach (var option in group.Options)
+                                      {
+                                          <option value="@option" selected="@(string.Equals(Model.ProfileTagEntries[i], option, StringComparison.OrdinalIgnoreCase))">@option</option>
+                                      }
+                                    </optgroup>
+                                }
+                                @if (additionalProfileTagOptions.Count > 0)
+                                {
+                                    <optgroup label="既存値">
+                                      @foreach (var option in additionalProfileTagOptions)
+                                      {
+                                          <option value="@option" selected="@(string.Equals(Model.ProfileTagEntries[i], option, StringComparison.OrdinalIgnoreCase))">@option</option>
+                                      }
+                                    </optgroup>
+                                }
+                              </select>
+                            </div>
+                            <button class="button button-danger" type="submit" name="editorAction" value="remove:profile-tag:@i">削除</button>
+                          </div>
+                      }
+                    </div>
+                    <p class="field-help">ジャンルごとに分けた候補から1件ずつ選んで追加します。</p>
                   </div>
                 </div>
               </div>
@@ -281,13 +364,23 @@
                 <p class="section-eyebrow">指標</p>
                 <h3>プロフィール指標</h3>
               </div>
+              <div class="inline-actions">
+                <button class="button button-secondary" type="submit" name="editorAction" value="add:profile-highlight">指標を追加</button>
+              </div>
             </div>
             <div class="item-list">
+              @if (doc.Profile.Highlights.Count == 0)
+              {
+                  <p class="empty-message">プロフィール指標はまだありません。必要な数だけ追加してください。</p>
+              }
               @for (var i = 0; i < doc.Profile.Highlights.Count; i++)
               {
                   <article class="item-card">
                     <div class="item-card-header">
                       <h4>指標 @(i + 1)</h4>
+                      <div class="inline-actions">
+                        <button class="button button-danger" type="submit" name="editorAction" value="remove:profile-highlight:@i">削除</button>
+                      </div>
                     </div>
                     <div class="field-grid">
                       <div class="field">
@@ -348,8 +441,27 @@
               <textarea asp-for="Document.ProfileSection.FocusItems"></textarea>
             </div>
             <div class="field field-full">
-              <label asp-for="Document.ProfileSection.Certifications"></label>
-              <textarea asp-for="Document.ProfileSection.Certifications"></textarea>
+              <div class="field-inline-header">
+                <label>資格・認定</label>
+                <button class="button button-secondary" type="submit" name="editorAction" value="add:certification">資格を追加</button>
+              </div>
+              <div class="dynamic-entry-list">
+                @if (Model.CertificationEntries.Count == 0)
+                {
+                    <p class="empty-message">資格はまだありません。必要な数だけ追加してください。</p>
+                }
+                @for (var i = 0; i < Model.CertificationEntries.Count; i++)
+                {
+                    <div class="dynamic-entry-row">
+                      <div class="field field-compact">
+                        <label for="certification-entry-@i">資格 @(i + 1)</label>
+                        <input id="certification-entry-@i" name="CertificationEntries[@i]" value="@Model.CertificationEntries[i]" />
+                      </div>
+                      <button class="button button-danger" type="submit" name="editorAction" value="remove:certification:@i">削除</button>
+                    </div>
+                }
+              </div>
+              <p class="field-help">資格は1件ずつ追加して入力します。</p>
             </div>
           </div>
         </div>
@@ -384,13 +496,23 @@
                 <p class="section-eyebrow">項目</p>
                 <h3>在籍歴項目</h3>
               </div>
+              <div class="inline-actions">
+                <button class="button button-secondary" type="submit" name="editorAction" value="add:career-item">在籍歴を追加</button>
+              </div>
             </div>
             <div class="item-list">
+              @if (doc.CareerSection.Items.Count == 0)
+              {
+                  <p class="empty-message">在籍歴項目はまだありません。必要な数だけ追加してください。</p>
+              }
               @for (var i = 0; i < doc.CareerSection.Items.Count; i++)
               {
                   <article class="item-card">
                     <div class="item-card-header">
                       <h4>在籍歴 @(i + 1)</h4>
+                      <div class="inline-actions">
+                        <button class="button button-danger" type="submit" name="editorAction" value="remove:career-item:@i">削除</button>
+                      </div>
                     </div>
                     <div class="field-grid">
                       <div class="field">
@@ -455,13 +577,24 @@
                 <p class="section-eyebrow">カテゴリ</p>
                 <h3>スキルカテゴリ</h3>
               </div>
+              <div class="inline-actions">
+                <button class="button button-secondary" type="submit" name="editorAction" value="add:skill-category">カテゴリを追加</button>
+              </div>
             </div>
             <div class="item-list">
+              @if (doc.SkillsSection.Categories.Count == 0)
+              {
+                  <p class="empty-message">スキルカテゴリはまだありません。必要な数だけ追加してください。</p>
+              }
               @for (var categoryIndex = 0; categoryIndex < doc.SkillsSection.Categories.Count; categoryIndex++)
               {
                   <article class="item-card">
                     <div class="item-card-header">
                       <h4>カテゴリ @(categoryIndex + 1)</h4>
+                      <div class="inline-actions">
+                        <button class="button button-secondary" type="submit" name="editorAction" value="add:skill-item:@categoryIndex">スキル項目を追加</button>
+                        <button class="button button-danger" type="submit" name="editorAction" value="remove:skill-category:@categoryIndex">カテゴリを削除</button>
+                      </div>
                     </div>
                     <div class="field-grid">
                       <div class="field">
@@ -475,9 +608,19 @@
                     </div>
 
                     <div class="nested-list">
+                      @if (doc.SkillsSection.Categories[categoryIndex].Items.Count == 0)
+                      {
+                          <p class="empty-message">このカテゴリにはスキル項目がありません。追加して入力してください。</p>
+                      }
                       @for (var itemIndex = 0; itemIndex < doc.SkillsSection.Categories[categoryIndex].Items.Count; itemIndex++)
                       {
                           <div class="nested-item">
+                            <div class="nested-item-header">
+                              <h5>スキル項目 @(itemIndex + 1)</h5>
+                              <div class="inline-actions">
+                                <button class="button button-danger" type="submit" name="editorAction" value="remove:skill-item:@categoryIndex:@itemIndex">削除</button>
+                              </div>
+                            </div>
                             <div class="field-grid">
                               <div class="field">
                                 <label asp-for="Document.SkillsSection.Categories[categoryIndex].Items[itemIndex].Name"></label>
@@ -525,49 +668,82 @@
             </div>
           </div>
 
-          <div class="item-list">
-            @for (var i = 0; i < doc.WorksSection.Items.Count; i++)
-            {
-                <article class="item-card">
-                  <div class="item-card-header">
-                    <h4>実績 @(i + 1)</h4>
-                  </div>
-                  <div class="field-grid">
-                    <div class="field">
-                      <label asp-for="Document.WorksSection.Items[i].Title"></label>
-                      <input asp-for="Document.WorksSection.Items[i].Title" />
+          <div class="collection">
+            <div class="collection-header">
+              <div>
+                <p class="section-eyebrow">項目</p>
+                <h3>実績カード</h3>
+              </div>
+              <div class="inline-actions">
+                <button class="button button-secondary" type="submit" name="editorAction" value="add:work-item">実績を追加</button>
+              </div>
+            </div>
+            <div class="item-list">
+              @if (doc.WorksSection.Items.Count == 0)
+              {
+                  <p class="empty-message">実績項目はまだありません。必要な数だけ追加してください。</p>
+              }
+              @for (var i = 0; i < doc.WorksSection.Items.Count; i++)
+              {
+                  var selectedWorkStack = SplitSelectionValues(doc.WorksSection.Items[i].Stack);
+                  var workStackOptions = BuildSelectionOptions(PortfolioEditorOptionCatalog.TechnologyOptions, doc.WorksSection.Items[i].Stack);
+                  <article class="item-card">
+                    <div class="item-card-header">
+                      <h4>実績 @(i + 1)</h4>
+                      <div class="inline-actions">
+                        <button class="button button-danger" type="submit" name="editorAction" value="remove:work-item:@i">削除</button>
+                      </div>
                     </div>
-                    <div class="field">
-                      <label asp-for="Document.WorksSection.Items[i].Year"></label>
-                      <input asp-for="Document.WorksSection.Items[i].Year" />
+                    <div class="field-grid">
+                      <div class="field">
+                        <label asp-for="Document.WorksSection.Items[i].Title"></label>
+                        <input asp-for="Document.WorksSection.Items[i].Title" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.WorksSection.Items[i].Year"></label>
+                        <input asp-for="Document.WorksSection.Items[i].Year" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.WorksSection.Items[i].Type"></label>
+                        <input asp-for="Document.WorksSection.Items[i].Type" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.WorksSection.Items[i].Role"></label>
+                        <input asp-for="Document.WorksSection.Items[i].Role" />
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.WorksSection.Items[i].Summary"></label>
+                        <textarea asp-for="Document.WorksSection.Items[i].Summary"></textarea>
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.WorksSection.Items[i].Responsibilities"></label>
+                        <textarea asp-for="Document.WorksSection.Items[i].Responsibilities"></textarea>
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.WorksSection.Items[i].Outcomes"></label>
+                        <textarea asp-for="Document.WorksSection.Items[i].Outcomes"></textarea>
+                      </div>
+                      <div class="field field-full">
+                        <label for="works-stack-@i">技術スタック</label>
+                        <textarea id="works-stack-@i" name="Document.WorksSection.Items[@i].Stack" class="selection-storage" hidden>@doc.WorksSection.Items[i].Stack</textarea>
+                        <div class="selection-list" data-selection-group="works-stack-@i" data-selection-target="works-stack-@i">
+                          @for (var optionIndex = 0; optionIndex < workStackOptions.Count; optionIndex++)
+                          {
+                              var option = workStackOptions[optionIndex];
+                              var optionId = $"works-stack-{i}-{optionIndex}";
+                              var isSelected = selectedWorkStack.Contains(option);
+                              <label class="selection-chip @(isSelected ? "is-selected" : string.Empty)" for="@optionId">
+                                <input id="@optionId" type="checkbox" value="@option" checked="@isSelected" />
+                                <span>@option</span>
+                              </label>
+                          }
+                        </div>
+                        <p class="field-help">候補から複数選択できます。</p>
+                      </div>
                     </div>
-                    <div class="field">
-                      <label asp-for="Document.WorksSection.Items[i].Type"></label>
-                      <input asp-for="Document.WorksSection.Items[i].Type" />
-                    </div>
-                    <div class="field">
-                      <label asp-for="Document.WorksSection.Items[i].Role"></label>
-                      <input asp-for="Document.WorksSection.Items[i].Role" />
-                    </div>
-                    <div class="field field-full">
-                      <label asp-for="Document.WorksSection.Items[i].Summary"></label>
-                      <textarea asp-for="Document.WorksSection.Items[i].Summary"></textarea>
-                    </div>
-                    <div class="field field-full">
-                      <label asp-for="Document.WorksSection.Items[i].Responsibilities"></label>
-                      <textarea asp-for="Document.WorksSection.Items[i].Responsibilities"></textarea>
-                    </div>
-                    <div class="field field-full">
-                      <label asp-for="Document.WorksSection.Items[i].Outcomes"></label>
-                      <textarea asp-for="Document.WorksSection.Items[i].Outcomes"></textarea>
-                    </div>
-                    <div class="field field-full">
-                      <label asp-for="Document.WorksSection.Items[i].Stack"></label>
-                      <textarea asp-for="Document.WorksSection.Items[i].Stack"></textarea>
-                    </div>
-                  </div>
-                </article>
-            }
+                  </article>
+              }
+            </div>
           </div>
         </div>
       </section>
@@ -595,37 +771,70 @@
             </div>
           </div>
 
-          <div class="item-list">
-            @for (var i = 0; i < doc.PersonalSection.Items.Count; i++)
-            {
-                <article class="item-card">
-                  <div class="item-card-header">
-                    <h4>個人活動 @(i + 1)</h4>
-                  </div>
-                  <div class="field-grid">
-                    <div class="field">
-                      <label asp-for="Document.PersonalSection.Items[i].Category"></label>
-                      <input asp-for="Document.PersonalSection.Items[i].Category" />
+          <div class="collection">
+            <div class="collection-header">
+              <div>
+                <p class="section-eyebrow">項目</p>
+                <h3>個人活動カード</h3>
+              </div>
+              <div class="inline-actions">
+                <button class="button button-secondary" type="submit" name="editorAction" value="add:personal-item">個人活動を追加</button>
+              </div>
+            </div>
+            <div class="item-list">
+              @if (doc.PersonalSection.Items.Count == 0)
+              {
+                  <p class="empty-message">個人活動項目はまだありません。必要な数だけ追加してください。</p>
+              }
+              @for (var i = 0; i < doc.PersonalSection.Items.Count; i++)
+              {
+                  var selectedPersonalStack = SplitSelectionValues(doc.PersonalSection.Items[i].Stack);
+                  var personalStackOptions = BuildSelectionOptions(PortfolioEditorOptionCatalog.TechnologyOptions, doc.PersonalSection.Items[i].Stack);
+                  <article class="item-card">
+                    <div class="item-card-header">
+                      <h4>個人活動 @(i + 1)</h4>
+                      <div class="inline-actions">
+                        <button class="button button-danger" type="submit" name="editorAction" value="remove:personal-item:@i">削除</button>
+                      </div>
                     </div>
-                    <div class="field">
-                      <label asp-for="Document.PersonalSection.Items[i].Title"></label>
-                      <input asp-for="Document.PersonalSection.Items[i].Title" />
+                    <div class="field-grid">
+                      <div class="field">
+                        <label asp-for="Document.PersonalSection.Items[i].Category"></label>
+                        <input asp-for="Document.PersonalSection.Items[i].Category" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.PersonalSection.Items[i].Title"></label>
+                        <input asp-for="Document.PersonalSection.Items[i].Title" />
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.PersonalSection.Items[i].Summary"></label>
+                        <textarea asp-for="Document.PersonalSection.Items[i].Summary"></textarea>
+                      </div>
+                      <div class="field field-full">
+                        <label asp-for="Document.PersonalSection.Items[i].Points"></label>
+                        <textarea asp-for="Document.PersonalSection.Items[i].Points"></textarea>
+                      </div>
+                      <div class="field field-full">
+                        <label for="personal-stack-@i">技術スタック</label>
+                        <textarea id="personal-stack-@i" name="Document.PersonalSection.Items[@i].Stack" class="selection-storage" hidden>@doc.PersonalSection.Items[i].Stack</textarea>
+                        <div class="selection-list" data-selection-group="personal-stack-@i" data-selection-target="personal-stack-@i">
+                          @for (var optionIndex = 0; optionIndex < personalStackOptions.Count; optionIndex++)
+                          {
+                              var option = personalStackOptions[optionIndex];
+                              var optionId = $"personal-stack-{i}-{optionIndex}";
+                              var isSelected = selectedPersonalStack.Contains(option);
+                              <label class="selection-chip @(isSelected ? "is-selected" : string.Empty)" for="@optionId">
+                                <input id="@optionId" type="checkbox" value="@option" checked="@isSelected" />
+                                <span>@option</span>
+                              </label>
+                          }
+                        </div>
+                        <p class="field-help">候補から複数選択できます。</p>
+                      </div>
                     </div>
-                    <div class="field field-full">
-                      <label asp-for="Document.PersonalSection.Items[i].Summary"></label>
-                      <textarea asp-for="Document.PersonalSection.Items[i].Summary"></textarea>
-                    </div>
-                    <div class="field field-full">
-                      <label asp-for="Document.PersonalSection.Items[i].Points"></label>
-                      <textarea asp-for="Document.PersonalSection.Items[i].Points"></textarea>
-                    </div>
-                    <div class="field field-full">
-                      <label asp-for="Document.PersonalSection.Items[i].Stack"></label>
-                      <textarea asp-for="Document.PersonalSection.Items[i].Stack"></textarea>
-                    </div>
-                  </div>
-                </article>
-            }
+                  </article>
+              }
+            </div>
           </div>
         </div>
       </section>
@@ -657,25 +866,43 @@
             </div>
           </div>
 
-          <div class="item-list">
-            @for (var i = 0; i < doc.Contact.Links.Count; i++)
-            {
-                <article class="item-card">
-                  <div class="item-card-header">
-                    <h4>リンク @(i + 1)</h4>
-                  </div>
-                  <div class="field-grid">
-                    <div class="field">
-                      <label asp-for="Document.Contact.Links[i].Label"></label>
-                      <input asp-for="Document.Contact.Links[i].Label" />
+          <div class="collection">
+            <div class="collection-header">
+              <div>
+                <p class="section-eyebrow">リンク</p>
+                <h3>外部リンク</h3>
+              </div>
+              <div class="inline-actions">
+                <button class="button button-secondary" type="submit" name="editorAction" value="add:contact-link">リンクを追加</button>
+              </div>
+            </div>
+            <div class="item-list">
+              @if (doc.Contact.Links.Count == 0)
+              {
+                  <p class="empty-message">連絡先リンクはまだありません。必要な数だけ追加してください。</p>
+              }
+              @for (var i = 0; i < doc.Contact.Links.Count; i++)
+              {
+                  <article class="item-card">
+                    <div class="item-card-header">
+                      <h4>リンク @(i + 1)</h4>
+                      <div class="inline-actions">
+                        <button class="button button-danger" type="submit" name="editorAction" value="remove:contact-link:@i">削除</button>
+                      </div>
                     </div>
-                    <div class="field">
-                      <label asp-for="Document.Contact.Links[i].Href"></label>
-                      <input asp-for="Document.Contact.Links[i].Href" />
+                    <div class="field-grid">
+                      <div class="field">
+                        <label asp-for="Document.Contact.Links[i].Label"></label>
+                        <input asp-for="Document.Contact.Links[i].Label" />
+                      </div>
+                      <div class="field">
+                        <label asp-for="Document.Contact.Links[i].Href"></label>
+                        <input asp-for="Document.Contact.Links[i].Href" />
+                      </div>
                     </div>
-                  </div>
-                </article>
-            }
+                  </article>
+              }
+            </div>
           </div>
         </div>
       </section>

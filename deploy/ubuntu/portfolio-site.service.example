@@ -1,0 +1,22 @@
+[Unit]
+Description=Portfolio Site ASP.NET Core application
+After=network.target mysql.service
+Wants=network.target
+
+[Service]
+WorkingDirectory=/var/www/portfolio-site/current
+ExecStart=/usr/bin/dotnet /var/www/portfolio-site/current/PortfolioSite.dll
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+SyslogIdentifier=portfolio-site
+User=www-data
+Group=www-data
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
+Environment=ConnectionStrings__PortfolioDatabase=Server=127.0.0.1;Port=3306;Database=portfolio_site;User ID=portfolio_app;Password=change-me;CharSet=utf8mb4;
+Environment=AdminAccount__LoginId=admin
+Environment=AdminAccount__Password=ChangeThisImmediately123!
+
+[Install]
+WantedBy=multi-user.target

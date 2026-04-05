@@ -95,6 +95,59 @@
     defaultAlt: "Hero image preview"
   });
 
+  const selectionSyncers = [];
+  const selectionGroups = document.querySelectorAll("[data-selection-group]");
+
+  selectionGroups.forEach((group) => {
+    const targetId = group.getAttribute("data-selection-target");
+    if (!targetId) {
+      return;
+    }
+
+    const target = document.getElementById(targetId);
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
+    const sync = () => {
+      const selected = [];
+      const checkboxes = group.querySelectorAll('input[type="checkbox"]');
+
+      checkboxes.forEach((checkbox) => {
+        if (!(checkbox instanceof HTMLInputElement)) {
+          return;
+        }
+
+        const wrapper = checkbox.closest(".selection-chip");
+        if (wrapper) {
+          wrapper.classList.toggle("is-selected", checkbox.checked);
+        }
+
+        if (checkbox.checked && checkbox.value.trim()) {
+          selected.push(checkbox.value.trim());
+        }
+      });
+
+      target.value = selected.join("\n");
+    };
+
+    group.addEventListener("change", (event) => {
+      if (event.target instanceof HTMLInputElement && event.target.type === "checkbox") {
+        sync();
+      }
+    });
+
+    selectionSyncers.push(sync);
+    sync();
+  });
+
+  const editorForm = document.getElementById("editorForm");
+  if (editorForm instanceof HTMLFormElement) {
+    editorForm.addEventListener("submit", () => {
+      selectionSyncers.forEach((sync) => sync());
+    });
+  }
+
   const toggleButtons = document.querySelectorAll("[data-password-toggle]");
 
   toggleButtons.forEach((button) => {

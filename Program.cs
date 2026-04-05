@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using PortfolioSite.Data;
 using PortfolioSite.Models.Identity;
 using PortfolioSite.Models.Options;
@@ -19,10 +21,21 @@ builder.Services
     .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "AdminAccount:Password must not be empty.")
     .ValidateOnStart();
 
+builder.Services
+    .AddOptions<ReverseProxyOptions>()
+    .Bind(builder.Configuration.GetSection("ReverseProxy"));
+
 var connectionString = builder.Configuration.GetConnectionString("PortfolioDatabase")
     ?? throw new InvalidOperationException("Connection string 'PortfolioDatabase' is not configured.");
 
 builder.Services.AddDbContext<PortfolioDbContext>(options => PortfolioDatabaseOptions.Configure(options, connectionString));
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+});
 
 builder.Services.AddIdentity<AdminUser, IdentityRole>(options =>
     {
@@ -61,6 +74,16 @@ builder.Services.AddScoped<PortfolioContentService>();
 builder.Services.AddScoped<PortfolioDbInitializer>();
 
 var app = builder.Build();
+
+var reverseProxyOptions = app.Services.GetRequiredService<IOptions<ReverseProxyOptions>>().Value;
+if (reverseProxyOptions.TrustAllProxies)
+{
+    var forwardedHeadersOptions = app.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
+    forwardedHeadersOptions.KnownNetworks.Clear();
+    forwardedHeadersOptions.KnownProxies.Clear();
+}
+
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {

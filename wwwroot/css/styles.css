@@ -99,10 +99,47 @@ a {
   backdrop-filter: blur(18px);
 }
 
+.site-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.28rem;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 30px rgba(28, 53, 87, 0.08);
+  cursor: pointer;
+}
+
+.site-nav-toggle span {
+  width: 1.2rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.site-nav-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+.site-nav-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.site-nav-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
 .brand {
   display: inline-flex;
   align-items: center;
   gap: 0.85rem;
+  min-width: 0;
 }
 
 .brand-mark {
@@ -123,6 +160,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.08rem;
+  min-width: 0;
 }
 
 .brand-copy strong,
@@ -619,6 +657,16 @@ h4 {
   border: 1px solid rgba(255, 255, 255, 0.74);
 }
 
+.timeline-content,
+.timeline-content > *,
+.skill-table-row > *,
+.work-summary,
+.work-detail,
+.contact-panel > *,
+.personal-card > * {
+  min-width: 0;
+}
+
 .skill-table-head {
   background: rgba(15, 118, 110, 0.08);
   border-color: rgba(15, 118, 110, 0.12);
@@ -818,19 +866,130 @@ h4 {
 @media (max-width: 1024px) {
   .hero,
   .profile-grid,
-  .work-card,
-  .personal-grid,
-  .contact-panel {
+  .work-card {
     grid-template-columns: 1fr;
   }
 
-  .site-header {
+  .hero.has-hero-image {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding-top: 1.5rem;
+  }
+
+  .hero-copy,
+  .hero.has-hero-image .hero-copy,
+  .hero-side,
+  .hero.has-hero-image .hero-side {
+    max-width: none;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .personal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .contact-panel {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .site-nav {
-    justify-content: center;
+  .contact-panel > div,
+  .contact-actions,
+  .social-list {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .contact-actions,
+  .social-list {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .background-grid {
+    background-size: 28px 28px;
+  }
+
+  .background-orb {
+    width: 22rem;
+    height: 22rem;
+    filter: blur(72px);
+  }
+
+  .site-header {
+    position: sticky;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 1rem 0;
+  }
+
+  .js-enabled .site-nav-toggle {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  .js-enabled .site-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    margin-top: 0.35rem;
+    border-radius: 24px;
+    padding: 0.55rem;
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    max-height: 0;
+    overflow: hidden;
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease,
+      max-height 180ms ease;
+  }
+
+  .js-enabled .site-nav.is-open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+    max-height: 18rem;
+  }
+
+  .site-nav a {
+    text-align: center;
+  }
+
+  .section {
+    padding: 3rem 0;
+  }
+
+  .hero,
+  .hero.has-hero-image {
+    gap: 1.2rem;
+    padding-top: 1rem;
+  }
+
+  h1 {
+    max-width: none;
+    font-size: clamp(2.7rem, 10vw, 4.2rem);
+  }
+
+  .timeline-item {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .timeline-side {
+    gap: 0.7rem;
+  }
+
+  .skill-table-row {
+    grid-template-columns: minmax(120px, 0.34fr) minmax(96px, 0.22fr) minmax(0, 1fr);
+    gap: 0.85rem;
+  }
+
+  .work-meta {
+    justify-content: flex-start;
   }
 
   .contact-actions {
@@ -843,14 +1002,26 @@ h4 {
     width: min(calc(100% - 1.2rem), var(--max-width));
   }
 
+  .brand {
+    min-width: 0;
+  }
+
+  .brand-copy strong {
+    font-size: 0.96rem;
+    overflow-wrap: anywhere;
+  }
+
+  .brand-copy small {
+    font-size: 0.84rem;
+    overflow-wrap: anywhere;
+  }
+
   .site-nav {
-    width: 100%;
-    border-radius: 24px;
+    grid-template-columns: 1fr;
   }
 
   .site-nav a {
-    flex: 1 1 auto;
-    text-align: center;
+    width: 100%;
   }
 
   .hero {
@@ -874,9 +1045,23 @@ h4 {
     min-height: 280px;
   }
 
+  .hero-panel,
+  .hero-visual,
+  .panel,
+  .skill-card,
+  .work-card,
+  .contact-panel,
+  .personal-card {
+    padding: 1.2rem;
+  }
+
   .timeline-item,
   .skill-table-row,
   .skill-table-head {
+    grid-template-columns: 1fr;
+  }
+
+  .personal-grid {
     grid-template-columns: 1fr;
   }
 
@@ -889,11 +1074,12 @@ h4 {
   .contact-actions,
   .social-list {
     width: 100%;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr;
     align-items: stretch;
   }
 
-  .button,
+  .contact-actions .button,
   .social-list a {
     width: 100%;
   }
