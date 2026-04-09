@@ -1,0 +1,234 @@
+@model PersonalItemDetailViewModel
+@{
+    static List<string> SplitLines(string? value)
+    {
+        return (value ?? string.Empty)
+            .Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.TrimStart('-', '*', '+', ' '))
+            .ToList();
+    }
+
+    static List<string> SplitParagraphs(string? value)
+    {
+        return (value ?? string.Empty)
+            .Split("\n\n", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Select(item => item.Replace("\n", " ").Trim())
+            .ToList();
+    }
+
+    static string GetInitials(string? value)
+    {
+        return string.Concat(
+            (value ?? string.Empty)
+                .Split(' ', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .Select(item => item[0])
+        ).ToUpperInvariant();
+    }
+
+    var document = Model.Document;
+    var item = Model.Item;
+    var detailSummary = string.IsNullOrWhiteSpace(item.DetailSummary) ? item.Summary : item.DetailSummary;
+    var detailBody = string.IsNullOrWhiteSpace(item.DetailBody) ? item.Summary : item.DetailBody;
+    var detailParagraphs = SplitParagraphs(detailBody);
+    var detailPoints = SplitLines(item.Points);
+    var stackItems = SplitLines(item.Stack);
+    var hasItemImage = !string.IsNullOrWhiteSpace(item.ImageSrc);
+    var itemImageAlt = string.IsNullOrWhiteSpace(item.ImageAlt) ? $"{item.Title} の写真" : item.ImageAlt;
+    var shortName = string.IsNullOrWhiteSpace(document.Profile.ShortName)
+        ? GetInitials(document.Profile.Name)
+        : document.Profile.ShortName;
+    var footerRole = string.IsNullOrWhiteSpace(document.FooterRole)
+        ? document.Profile.Role
+        : document.FooterRole;
+
+    ViewData["Title"] = string.IsNullOrWhiteSpace(document.SiteTitle)
+        ? item.Title
+        : $"{item.Title} | {document.SiteTitle}";
+    ViewData["MetaDescription"] = string.IsNullOrWhiteSpace(detailSummary)
+        ? document.MetaDescription
+        : detailSummary;
+}
+<div class="background-grid" aria-hidden="true"></div>
+<div class="background-orb background-orb-left" aria-hidden="true"></div>
+<div class="background-orb background-orb-right" aria-hidden="true"></div>
+
+<div class="page-shell detail-shell">
+  <header class="site-header">
+    <a class="brand" asp-action="Index" asp-controller="Home" aria-label="トップページへ移動">
+      <span class="brand-mark">@shortName</span>
+      <span class="brand-copy">
+        <strong>@document.Profile.Name</strong>
+        <small>@document.Profile.Role</small>
+      </span>
+    </a>
+
+    <nav class="site-nav detail-nav" aria-label="ページナビゲーション">
+      <a asp-action="Index" asp-controller="Home" asp-fragment="personal">PERSONAL</a>
+      <a asp-action="Index" asp-controller="Home" asp-fragment="contact">CONTACT</a>
+    </nav>
+  </header>
+
+  <main class="detail-main">
+    <section class="detail-hero section">
+      <div class="detail-hero-copy reveal">
+        <div class="detail-path">
+          <a asp-action="Index" asp-controller="Home">ポートフォリオ</a>
+          <span>/</span>
+          <span>個別ページ</span>
+        </div>
+        <div class="detail-heading-row">
+          <p class="eyebrow">@item.Category</p>
+          <span class="detail-page-badge">個別ページ</span>
+        </div>
+        <h1>@item.Title</h1>
+        <p class="hero-summary">@detailSummary</p>
+        <p class="detail-page-note">このページはポートフォリオ一覧の PERSONAL セクションから開く詳細ページです。</p>
+
+        <div class="detail-actions">
+          <a class="button" asp-action="Index" asp-controller="Home" asp-fragment="personal">ポートフォリオ一覧へ戻る</a>
+          <a class="detail-link" asp-action="Index" asp-controller="Home" asp-fragment="contact">連絡先を見る</a>
+        </div>
+      </div>
+
+      <div class="detail-hero-side">
+        <figure class="detail-visual reveal @(hasItemImage ? "has-image" : string.Empty)" aria-label="活動写真">
+          @if (hasItemImage)
+          {
+              <img
+                src="@item.ImageSrc"
+                alt="@itemImageAlt"
+                fetchpriority="high"
+                decoding="async"
+              />
+          }
+          else
+          {
+              <div class="detail-visual-placeholder" aria-hidden="true">
+                <span class="detail-visual-mark">PIC</span>
+                <div class="detail-visual-copy">
+                  <strong>Photo / Activity</strong>
+                  <p>検証風景、構成図、作業画面などを入れると、詳細ページの説得力が上がります。</p>
+                </div>
+              </div>
+          }
+          <figcaption class="detail-visual-caption">
+            <span>@item.Category</span>
+            <strong>@itemImageAlt</strong>
+          </figcaption>
+        </figure>
+
+        <aside class="hero-panel reveal" aria-label="取り組み概要">
+          <p class="panel-kicker">Detail Snapshot</p>
+          <div class="hero-highlight-list">
+            <article>
+              <span>Category</span>
+              <strong>@item.Category</strong>
+            </article>
+            <article>
+              <span>Focus</span>
+              <strong>@(detailPoints.Count == 0 ? "詳細を準備中" : $"{detailPoints.Count} topics")</strong>
+            </article>
+            <article>
+              <span>Stack</span>
+              <strong>@(stackItems.Count == 0 ? "No stack listed" : string.Join(" / ", stackItems.Take(3)))</strong>
+            </article>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="detail-layout">
+        <article class="panel reveal detail-story">
+          <p class="panel-kicker">Overview</p>
+          <div class="body-copy">
+            @if (detailParagraphs.Count == 0)
+            {
+                <p>この取り組みの説明はまだ設定されていません。</p>
+            }
+            else
+            {
+                @foreach (var paragraph in detailParagraphs)
+                {
+                    <p>@paragraph</p>
+                }
+            }
+          </div>
+        </article>
+
+        <div class="detail-sidebar">
+          <article class="panel reveal detail-panel">
+            <p class="panel-kicker">What I Do</p>
+            @if (detailPoints.Count == 0)
+            {
+                <p class="detail-note">箇条書きの詳細はまだありません。</p>
+            }
+            else
+            {
+                <ul class="bullet-list detail-list">
+                  @foreach (var point in detailPoints)
+                  {
+                      <li>@point</li>
+                  }
+                </ul>
+            }
+          </article>
+
+          <article class="panel reveal detail-panel">
+            <p class="panel-kicker">Stack</p>
+            @if (stackItems.Count == 0)
+            {
+                <p class="detail-note">技術スタックは未設定です。</p>
+            }
+            else
+            {
+                <ul class="stack-list">
+                  @foreach (var stackItem in stackItems)
+                  {
+                      <li>@stackItem</li>
+                  }
+                </ul>
+            }
+          </article>
+        </div>
+      </div>
+    </section>
+
+    @if (Model.RelatedItems.Count > 0)
+    {
+        <section class="section">
+          <div class="section-heading reveal">
+            <p class="eyebrow">MORE</p>
+            <h2>ほかの個人活動</h2>
+            <p class="section-intro">同じポートフォリオ内の他の取り組みにも移動できます。</p>
+          </div>
+
+          <div class="related-list">
+            @foreach (var relatedItem in Model.RelatedItems)
+            {
+                <a
+                  class="related-card reveal"
+                  asp-action="Personal"
+                  asp-controller="Home"
+                  asp-route-index="@relatedItem.Index"
+                  asp-route-slug="@(!string.IsNullOrWhiteSpace(relatedItem.Slug) ? relatedItem.Slug : null)"
+                >
+                  <p class="personal-meta">@relatedItem.Category</p>
+                  <h3>@relatedItem.Title</h3>
+                  <p>@relatedItem.Summary</p>
+                </a>
+            }
+          </div>
+        </section>
+    }
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      <span>@document.Profile.Name</span>
+      <span>·</span>
+      <span>@footerRole</span>
+    </p>
+  </footer>
+</div>

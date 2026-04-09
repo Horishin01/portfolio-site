@@ -1,7 +1,7 @@
 [Unit]
 Description=Portfolio Site ASP.NET Core application
-After=network.target mysql.service
-Wants=network.target
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 WorkingDirectory=/var/www/portfolio-site/current

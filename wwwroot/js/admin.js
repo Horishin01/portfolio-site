@@ -95,6 +95,19 @@
     defaultAlt: "Hero image preview"
   });
 
+  document.querySelectorAll("[id^='personalImagePreviewCard-']").forEach((card) => {
+    const index = card.id.replace("personalImagePreviewCard-", "");
+
+    bindImagePreview({
+      cardId: `personalImagePreviewCard-${index}`,
+      mediaId: `personalImagePreviewMedia-${index}`,
+      fileInputId: `personalImageFile-${index}`,
+      srcInputId: `personalImageSrcInput-${index}`,
+      altInputId: `personalImageAltInput-${index}`,
+      defaultAlt: "Personal activity image preview"
+    });
+  });
+
   const selectionSyncers = [];
   const selectionGroups = document.querySelectorAll("[data-selection-group]");
 

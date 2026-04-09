@@ -14,6 +14,7 @@ public sealed class AdminController : Controller
 {
     private const string FaviconDirectory = "uploads/favicons";
     private const string HeroImageDirectory = "uploads/hero-images";
+    private const string PersonalItemImageDirectory = "uploads/personal-items";
     private static readonly HashSet<string> AllowedFaviconExtensions =
     [
         ".ico",
@@ -34,6 +35,7 @@ public sealed class AdminController : Controller
     ];
     private const long MaxFaviconBytes = 1 * 1024 * 1024;
     private const long MaxHeroImageBytes = 5 * 1024 * 1024;
+    private const long MaxPersonalItemImageBytes = 5 * 1024 * 1024;
 
     private readonly PortfolioContentService _contentService;
     private readonly IWebHostEnvironment _environment;
@@ -186,6 +188,33 @@ public sealed class AdminController : Controller
         catch (Exception ex)
         {
             ModelState.AddModelError(nameof(model.HeroImageFile), ex.Message);
+        }
+
+        for (var itemIndex = 0; itemIndex < model.Document.PersonalSection.Items.Count; itemIndex++)
+        {
+            var personalItem = model.Document.PersonalSection.Items[itemIndex];
+            var fileFieldName = GetPersonalItemImageFieldName(itemIndex);
+
+            try
+            {
+                var uploadedPersonalImagePath = await SavePersonalItemImageAsync(
+                    Request.Form.Files.GetFile(fileFieldName),
+                    personalItem.ImageSrc,
+                    cancellationToken
+                );
+
+                if (!string.IsNullOrWhiteSpace(uploadedPersonalImagePath))
+                {
+                    personalItem.ImageSrc = uploadedPersonalImagePath;
+                }
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError(fileFieldName, ex.Message);
+            }
+
+            ModelState.Remove($"Document.PersonalSection.Items[{itemIndex}].ImageSrc");
+            ModelState.Remove($"Document.PersonalSection.Items[{itemIndex}].ImageAlt");
         }
 
         ModelState.Remove(faviconSrcKey);
@@ -527,6 +556,24 @@ public sealed class AdminController : Controller
         );
     }
 
+    private async Task<string?> SavePersonalItemImageAsync(
+        IFormFile? personalImageFile,
+        string currentPersonalImageSrc,
+        CancellationToken cancellationToken
+    )
+    {
+        return await SaveManagedImageAsync(
+            personalImageFile,
+            currentPersonalImageSrc,
+            PersonalItemImageDirectory,
+            AllowedHeroImageExtensions,
+            MaxPersonalItemImageBytes,
+            "写真サイズは 5 MB 以下にしてください。",
+            "対応形式は JPG / PNG / WEBP / GIF です。",
+            cancellationToken
+        );
+    }
+
     private async Task<string?> SaveManagedImageAsync(
         IFormFile? imageFile,
         string currentImageSrc,
@@ -594,6 +641,11 @@ public sealed class AdminController : Controller
         {
             System.IO.File.Delete(fullPath);
         }
+    }
+
+    private static string GetPersonalItemImageFieldName(int index)
+    {
+        return $"PersonalItemImageFile_{index}";
     }
 
     private void SetLayoutViewData(PortfolioDocument document)

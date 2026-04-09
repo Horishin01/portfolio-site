@@ -229,14 +229,26 @@ public sealed class PersonalItem
     [Display(Name = "タイトル")]
     public string Title { get; set; } = "";
 
-    [Display(Name = "概要")]
+    [Display(Name = "一覧カードの概要")]
     public string Summary { get; set; } = "";
 
-    [Display(Name = "内容")]
+    [Display(Name = "個別ページの要約")]
+    public string DetailSummary { get; set; } = "";
+
+    [Display(Name = "個別ページ本文")]
+    public string DetailBody { get; set; } = "";
+
+    [Display(Name = "個別ページの箇条書き")]
     public string Points { get; set; } = "";
 
     [Display(Name = "技術スタック")]
     public string Stack { get; set; } = "";
+
+    [Display(Name = "画像URL")]
+    public string ImageSrc { get; set; } = "";
+
+    [Display(Name = "画像の説明文")]
+    public string ImageAlt { get; set; } = "";
 }
 
 public sealed class ContactContent

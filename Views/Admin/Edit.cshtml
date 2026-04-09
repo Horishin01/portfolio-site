@@ -47,6 +47,11 @@
             .ToList();
     }
 
+    static string GetPersonalItemImageFieldName(int index)
+    {
+        return $"PersonalItemImageFile_{index}";
+    }
+
     var tone = ViewData["StatusTone"] as string ?? TempData["StatusTone"] as string;
     var tempMessage = ViewData["StatusMessage"] as string ?? TempData["StatusMessage"] as string;
     var hasErrors = !ViewData.ModelState.IsValid;
@@ -753,7 +758,7 @@
           <p class="section-eyebrow">個人</p>
           <h2>個人活動</h2>
           <p class="section-description">
-            個人活動セクションのカードを編集します。
+            個人活動セクションの一覧カードと個別ページを編集します。入力欄を「一覧カード」「個別ページ」「共通設定」に分け、どこへ出る内容か判断しやすくしています。
           </p>
           <div class="section-header-meta">
             <span class="section-meta-tag">@doc.PersonalSection.Items.Count 件</span>
@@ -790,47 +795,160 @@
               {
                   var selectedPersonalStack = SplitSelectionValues(doc.PersonalSection.Items[i].Stack);
                   var personalStackOptions = BuildSelectionOptions(PortfolioEditorOptionCatalog.TechnologyOptions, doc.PersonalSection.Items[i].Stack);
+                  var hasPersonalImage = !string.IsNullOrWhiteSpace(doc.PersonalSection.Items[i].ImageSrc);
+                  var personalImageFieldName = GetPersonalItemImageFieldName(i);
+                  var personalSlug = PersonalItemRouteHelper.CreateSlug(doc.PersonalSection.Items[i].Title);
+                  var hasPersonalDetailContent =
+                      !string.IsNullOrWhiteSpace(doc.PersonalSection.Items[i].DetailSummary)
+                      || !string.IsNullOrWhiteSpace(doc.PersonalSection.Items[i].DetailBody)
+                      || !string.IsNullOrWhiteSpace(doc.PersonalSection.Items[i].Points);
                   <article class="item-card">
                     <div class="item-card-header">
                       <h4>個人活動 @(i + 1)</h4>
                       <div class="inline-actions">
+                        <a
+                          class="button button-ghost"
+                          asp-controller="Home"
+                          asp-action="Index"
+                          asp-fragment="personal"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          公開一覧を確認
+                        </a>
+                        <a
+                          class="button button-secondary"
+                          asp-controller="Home"
+                          asp-action="Personal"
+                          asp-route-index="@i"
+                          asp-route-slug="@(!string.IsNullOrWhiteSpace(personalSlug) ? personalSlug : null)"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          個別ページを確認
+                        </a>
                         <button class="button button-danger" type="submit" name="editorAction" value="remove:personal-item:@i">削除</button>
                       </div>
                     </div>
-                    <div class="field-grid">
-                      <div class="field">
-                        <label asp-for="Document.PersonalSection.Items[i].Category"></label>
-                        <input asp-for="Document.PersonalSection.Items[i].Category" />
+                    <div class="item-card-meta">
+                      <div class="item-card-tag-row" aria-label="表示先">
+                        <span class="item-card-tag">トップページ一覧</span>
+                        <span class="item-card-tag is-detail">個別ページ</span>
+                        <span class="item-card-tag is-shared">@(hasPersonalDetailContent ? "個別ページ設定あり" : "個別ページ設定は概要を流用")</span>
                       </div>
-                      <div class="field">
-                        <label asp-for="Document.PersonalSection.Items[i].Title"></label>
-                        <input asp-for="Document.PersonalSection.Items[i].Title" />
-                      </div>
-                      <div class="field field-full">
-                        <label asp-for="Document.PersonalSection.Items[i].Summary"></label>
-                        <textarea asp-for="Document.PersonalSection.Items[i].Summary"></textarea>
-                      </div>
-                      <div class="field field-full">
-                        <label asp-for="Document.PersonalSection.Items[i].Points"></label>
-                        <textarea asp-for="Document.PersonalSection.Items[i].Points"></textarea>
-                      </div>
-                      <div class="field field-full">
-                        <label for="personal-stack-@i">技術スタック</label>
-                        <textarea id="personal-stack-@i" name="Document.PersonalSection.Items[@i].Stack" class="selection-storage" hidden>@doc.PersonalSection.Items[i].Stack</textarea>
-                        <div class="selection-list" data-selection-group="personal-stack-@i" data-selection-target="personal-stack-@i">
-                          @for (var optionIndex = 0; optionIndex < personalStackOptions.Count; optionIndex++)
-                          {
-                              var option = personalStackOptions[optionIndex];
-                              var optionId = $"personal-stack-{i}-{optionIndex}";
-                              var isSelected = selectedPersonalStack.Contains(option);
-                              <label class="selection-chip @(isSelected ? "is-selected" : string.Empty)" for="@optionId">
-                                <input id="@optionId" type="checkbox" value="@option" checked="@isSelected" />
-                                <span>@option</span>
-                              </label>
-                          }
+                      <p class="field-help item-card-route">個別URL: /personal/@i@(string.IsNullOrWhiteSpace(personalSlug) ? string.Empty : $"/{personalSlug}")</p>
+                      <p class="field-help">上段の一覧カード設定はトップページの PERSONAL に出ます。個別ページ設定はカード遷移後の詳細ページに出ます。</p>
+                    </div>
+                    <div class="editor-scope-grid">
+                      <section class="editor-scope-card is-listing" aria-label="一覧カード設定">
+                        <span class="editor-scope-label">一覧カード</span>
+                        <h5>トップページの PERSONAL 一覧に出す内容</h5>
+                        <p>カード上で最初に見える情報です。ここだけ見ても内容が伝わる短さで揃えます。</p>
+                        <div class="field-grid">
+                          <div class="field">
+                            <label asp-for="Document.PersonalSection.Items[i].Category"></label>
+                            <input asp-for="Document.PersonalSection.Items[i].Category" />
+                          </div>
+                          <div class="field">
+                            <label asp-for="Document.PersonalSection.Items[i].Title"></label>
+                            <input asp-for="Document.PersonalSection.Items[i].Title" />
+                          </div>
+                          <div class="field field-full">
+                            <label asp-for="Document.PersonalSection.Items[i].Summary"></label>
+                            <textarea asp-for="Document.PersonalSection.Items[i].Summary"></textarea>
+                            <p class="field-help">一覧カードで最初に見せる短い説明です。PERSONAL セクションではこの内容を中心に表示します。</p>
+                          </div>
                         </div>
-                        <p class="field-help">候補から複数選択できます。</p>
-                      </div>
+                      </section>
+
+                      <section class="editor-scope-card is-detail" aria-label="個別ページ設定">
+                        <span class="editor-scope-label">個別ページ</span>
+                        <h5>カードを開いた後の詳細ページに出す内容</h5>
+                        <p>一覧から遷移した先の専用ページです。導入文、本文、箇条書きで情報量を増やします。</p>
+                        <div class="field-grid is-single">
+                          <div class="field field-full">
+                            <label asp-for="Document.PersonalSection.Items[i].DetailSummary"></label>
+                            <textarea asp-for="Document.PersonalSection.Items[i].DetailSummary"></textarea>
+                            <p class="field-help">個別ページのヒーロー領域に表示する導入文です。未入力なら上の概要を流用します。</p>
+                          </div>
+                          <div class="field field-full">
+                            <label asp-for="Document.PersonalSection.Items[i].DetailBody"></label>
+                            <textarea asp-for="Document.PersonalSection.Items[i].DetailBody"></textarea>
+                            <p class="field-help">個別ページ本文です。空行で段落を分けると、そのまま段落として表示します。</p>
+                          </div>
+                          <div class="field field-full">
+                            <label asp-for="Document.PersonalSection.Items[i].Points"></label>
+                            <textarea asp-for="Document.PersonalSection.Items[i].Points"></textarea>
+                            <p class="field-help">個別ページの箇条書きに使います。1行につき1項目で入力してください。</p>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section class="editor-scope-card is-shared" aria-label="共通設定">
+                        <span class="editor-scope-label">共通設定</span>
+                        <h5>一覧カードと個別ページの両方で使う内容</h5>
+                        <p>画像とスタックはカードにも詳細にも出ます。見え方が両方で破綻しない内容にします。</p>
+                        <div class="field-grid is-single">
+                          <div class="field field-full image-field">
+                            <label>活動写真</label>
+                            <div class="image-field-shell">
+                              <div class="personal-preview-row">
+                                <div class="image-preview-card personal-preview-card @(hasPersonalImage ? "has-image" : string.Empty)" id="personalImagePreviewCard-@i">
+                                  <img
+                                    class="image-preview-media"
+                                    id="personalImagePreviewMedia-@i"
+                                    src="@(hasPersonalImage ? doc.PersonalSection.Items[i].ImageSrc : string.Empty)"
+                                    alt="@(string.IsNullOrWhiteSpace(doc.PersonalSection.Items[i].ImageAlt) ? $"{doc.PersonalSection.Items[i].Title} の画像プレビュー" : doc.PersonalSection.Items[i].ImageAlt)"
+                                    hidden="@(!hasPersonalImage)"
+                                  />
+                                  <div class="image-preview-placeholder">
+                                    <span class="image-preview-mark">PIC</span>
+                                    <div class="image-preview-copy">
+                                      <strong>個人活動の写真</strong>
+                                      <p>カードのサムネイルと詳細ページのメインビジュアルに使います。アップロードまたは URL 入力でここに反映されます。</p>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div class="field hero-upload-field">
+                                  <label for="personalImageFile-@i">写真アップロード</label>
+                                  <input id="personalImageFile-@i" name="@personalImageFieldName" type="file" accept=".jpg,.jpeg,.png,.webp,.gif" />
+                                  <p class="field-help">JPG / PNG / WEBP / GIF に対応しています。5MBまでアップロードでき、画像URLより優先して保存されます。</p>
+                                  <p class="field-help">写真をアップロードしない場合は、下の画像URLを使用します。説明文は alt として保存されます。</p>
+
+                                  <div class="hero-upload-meta">
+                                    <div class="field">
+                                      <label asp-for="Document.PersonalSection.Items[i].ImageSrc"></label>
+                                      <input asp-for="Document.PersonalSection.Items[i].ImageSrc" id="personalImageSrcInput-@i" />
+                                    </div>
+                                    <div class="field">
+                                      <label asp-for="Document.PersonalSection.Items[i].ImageAlt"></label>
+                                      <input asp-for="Document.PersonalSection.Items[i].ImageAlt" id="personalImageAltInput-@i" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div class="field field-full">
+                            <label for="personal-stack-@i">技術スタック</label>
+                            <textarea id="personal-stack-@i" name="Document.PersonalSection.Items[@i].Stack" class="selection-storage" hidden>@doc.PersonalSection.Items[i].Stack</textarea>
+                            <div class="selection-list" data-selection-group="personal-stack-@i" data-selection-target="personal-stack-@i">
+                              @for (var optionIndex = 0; optionIndex < personalStackOptions.Count; optionIndex++)
+                              {
+                                  var option = personalStackOptions[optionIndex];
+                                  var optionId = $"personal-stack-{i}-{optionIndex}";
+                                  var isSelected = selectedPersonalStack.Contains(option);
+                                  <label class="selection-chip @(isSelected ? "is-selected" : string.Empty)" for="@optionId">
+                                    <input id="@optionId" type="checkbox" value="@option" checked="@isSelected" />
+                                    <span>@option</span>
+                                  </label>
+                              }
+                            </div>
+                            <p class="field-help">候補から複数選択できます。</p>
+                          </div>
+                        </div>
+                      </section>
                     </div>
                   </article>
               }

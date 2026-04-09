@@ -70,8 +70,12 @@ public sealed class PortfolioPersonalItemRecord
     public string Category { get; set; } = "";
     public string Title { get; set; } = "";
     public string Summary { get; set; } = "";
+    public string DetailSummary { get; set; } = "";
+    public string DetailBody { get; set; } = "";
     public string Points { get; set; } = "";
     public string Stack { get; set; } = "";
+    public string ImageSrc { get; set; } = "";
+    public string ImageAlt { get; set; } = "";
     public PortfolioContentRecord PortfolioContent { get; set; } = null!;
 }
 

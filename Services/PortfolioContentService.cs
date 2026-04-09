@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using PortfolioSite.Data;
 using PortfolioSite.Models.Content;
 
@@ -6,10 +7,14 @@ namespace PortfolioSite.Services;
 
 public sealed class PortfolioContentService
 {
+    private const string SnapshotCacheKey = "portfolio.snapshot";
+
+    private readonly IMemoryCache _cache;
     private readonly PortfolioDbContext _dbContext;
 
-    public PortfolioContentService(PortfolioDbContext dbContext)
+    public PortfolioContentService(PortfolioDbContext dbContext, IMemoryCache cache)
     {
+        _cache = cache;
         _dbContext = dbContext;
     }
 
@@ -22,6 +27,11 @@ public sealed class PortfolioContentService
 
     public async Task<PortfolioSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default)
     {
+        if (_cache.TryGetValue<PortfolioSnapshot>(SnapshotCacheKey, out var cachedSnapshot))
+        {
+            return CloneSnapshot(cachedSnapshot!);
+        }
+
         var record = await LoadRecordAsync(asTracking: false, cancellationToken);
 
         if (record is null)
@@ -29,11 +39,14 @@ public sealed class PortfolioContentService
             return await ResetToDefaultAsync(cancellationToken);
         }
 
-        return new PortfolioSnapshot
+        var snapshot = new PortfolioSnapshot
         {
             Document = MapToDocument(record),
             UpdatedAtUtc = record.UpdatedAtUtc
         };
+
+        CacheSnapshot(snapshot);
+        return CloneSnapshot(snapshot);
     }
 
     public async Task<PortfolioSnapshot> SaveAsync(PortfolioDocument document, CancellationToken cancellationToken = default)
@@ -62,11 +75,14 @@ public sealed class PortfolioContentService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new PortfolioSnapshot
+        var snapshot = new PortfolioSnapshot
         {
             Document = MapToDocument(record),
             UpdatedAtUtc = record.UpdatedAtUtc
         };
+
+        CacheSnapshot(snapshot);
+        return CloneSnapshot(snapshot);
     }
 
     public async Task<PortfolioSnapshot> ResetToDefaultAsync(CancellationToken cancellationToken = default)
@@ -201,8 +217,12 @@ public sealed class PortfolioContentService
                         Category = item.Category,
                         Title = item.Title,
                         Summary = item.Summary,
+                        DetailSummary = item.DetailSummary,
+                        DetailBody = item.DetailBody,
                         Points = item.Points,
-                        Stack = item.Stack
+                        Stack = item.Stack,
+                        ImageSrc = item.ImageSrc,
+                        ImageAlt = item.ImageAlt
                     })
                     .ToList()
             },
@@ -332,8 +352,12 @@ public sealed class PortfolioContentService
                 Category = item.Category,
                 Title = item.Title,
                 Summary = item.Summary,
+                DetailSummary = item.DetailSummary,
+                DetailBody = item.DetailBody,
                 Points = item.Points,
-                Stack = item.Stack
+                Stack = item.Stack,
+                ImageSrc = item.ImageSrc,
+                ImageAlt = item.ImageAlt
             });
         }
     }
@@ -473,8 +497,12 @@ public sealed class PortfolioContentService
             item.Category = EmptyIfNull(item.Category);
             item.Title = EmptyIfNull(item.Title);
             item.Summary = EmptyIfNull(item.Summary);
+            item.DetailSummary = EmptyIfNull(item.DetailSummary);
+            item.DetailBody = EmptyIfNull(item.DetailBody);
             item.Points = EmptyIfNull(item.Points);
             item.Stack = EmptyIfNull(item.Stack);
+            item.ImageSrc = EmptyIfNull(item.ImageSrc);
+            item.ImageAlt = EmptyIfNull(item.ImageAlt);
         }
 
         document.Contact ??= new ContactContent();
@@ -503,5 +531,153 @@ public sealed class PortfolioContentService
         }
 
         return document;
+    }
+
+    private void CacheSnapshot(PortfolioSnapshot snapshot)
+    {
+        _cache.Set(
+            SnapshotCacheKey,
+            snapshot,
+            new MemoryCacheEntryOptions
+            {
+                Priority = CacheItemPriority.High
+            });
+    }
+
+    private static PortfolioSnapshot CloneSnapshot(PortfolioSnapshot source)
+    {
+        return new PortfolioSnapshot
+        {
+            Document = CloneDocument(source.Document),
+            UpdatedAtUtc = source.UpdatedAtUtc
+        };
+    }
+
+    private static PortfolioDocument CloneDocument(PortfolioDocument source)
+    {
+        return new PortfolioDocument
+        {
+            Locale = source.Locale,
+            SiteTitle = source.SiteTitle,
+            MetaDescription = source.MetaDescription,
+            FaviconSrc = source.FaviconSrc,
+            FooterRole = source.FooterRole,
+            Profile = new ProfileContent
+            {
+                Name = source.Profile.Name,
+                ShortName = source.Profile.ShortName,
+                Role = source.Profile.Role,
+                HeroEyebrow = source.Profile.HeroEyebrow,
+                HeroTitle = source.Profile.HeroTitle,
+                HeroImageSrc = source.Profile.HeroImageSrc,
+                HeroImageAlt = source.Profile.HeroImageAlt,
+                Summary = source.Profile.Summary,
+                Tags = source.Profile.Tags,
+                Highlights = source.Profile.Highlights
+                    .Select(item => new LabeledValueItem
+                    {
+                        Label = item.Label,
+                        Value = item.Value
+                    })
+                    .ToList()
+            },
+            ProfileSection = new ProfileSectionContent
+            {
+                Heading = source.ProfileSection.Heading,
+                Intro = source.ProfileSection.Intro,
+                Lead = source.ProfileSection.Lead,
+                Body = source.ProfileSection.Body,
+                FocusHeading = source.ProfileSection.FocusHeading,
+                FocusItems = source.ProfileSection.FocusItems,
+                CertificationsHeading = source.ProfileSection.CertificationsHeading,
+                Certifications = source.ProfileSection.Certifications
+            },
+            CareerSection = new CareerSectionContent
+            {
+                Heading = source.CareerSection.Heading,
+                Intro = source.CareerSection.Intro,
+                Items = source.CareerSection.Items
+                    .Select(item => new CareerItem
+                    {
+                        Period = item.Period,
+                        Category = item.Category,
+                        Organization = item.Organization,
+                        Title = item.Title,
+                        Description = item.Description,
+                        Highlights = item.Highlights
+                    })
+                    .ToList()
+            },
+            SkillsSection = new SkillsSectionContent
+            {
+                Heading = source.SkillsSection.Heading,
+                Intro = source.SkillsSection.Intro,
+                Categories = source.SkillsSection.Categories
+                    .Select(category => new SkillCategory
+                    {
+                        Title = category.Title,
+                        Summary = category.Summary,
+                        Items = category.Items
+                            .Select(item => new SkillItem
+                            {
+                                Name = item.Name,
+                                Experience = item.Experience,
+                                Note = item.Note
+                            })
+                            .ToList()
+                    })
+                    .ToList()
+            },
+            WorksSection = new WorksSectionContent
+            {
+                Heading = source.WorksSection.Heading,
+                Intro = source.WorksSection.Intro,
+                Items = source.WorksSection.Items
+                    .Select(item => new WorkItem
+                    {
+                        Title = item.Title,
+                        Year = item.Year,
+                        Type = item.Type,
+                        Role = item.Role,
+                        Summary = item.Summary,
+                        Responsibilities = item.Responsibilities,
+                        Outcomes = item.Outcomes,
+                        Stack = item.Stack
+                    })
+                    .ToList()
+            },
+            PersonalSection = new PersonalSectionContent
+            {
+                Heading = source.PersonalSection.Heading,
+                Intro = source.PersonalSection.Intro,
+                Items = source.PersonalSection.Items
+                    .Select(item => new PersonalItem
+                    {
+                        Category = item.Category,
+                        Title = item.Title,
+                        Summary = item.Summary,
+                        DetailSummary = item.DetailSummary,
+                        DetailBody = item.DetailBody,
+                        Points = item.Points,
+                        Stack = item.Stack,
+                        ImageSrc = item.ImageSrc,
+                        ImageAlt = item.ImageAlt
+                    })
+                    .ToList()
+            },
+            Contact = new ContactContent
+            {
+                Heading = source.Contact.Heading,
+                Note = source.Contact.Note,
+                Email = source.Contact.Email,
+                Links = source.Contact.Links
+                    .Select(link => new LinkItem
+                    {
+                        Label = link.Label,
+                        Href = link.Href
+                    })
+                    .ToList()
+            }
+        };
     }
 }

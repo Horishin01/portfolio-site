@@ -142,8 +142,12 @@ public sealed class PortfolioDbContext : IdentityDbContext<AdminUser>
             entity.Property(x => x.Category).IsRequired();
             entity.Property(x => x.Title).IsRequired();
             entity.Property(x => x.Summary).IsRequired();
+            entity.Property(x => x.DetailSummary).IsRequired();
+            entity.Property(x => x.DetailBody).IsRequired();
             entity.Property(x => x.Points).IsRequired();
             entity.Property(x => x.Stack).IsRequired();
+            entity.Property(x => x.ImageSrc).IsRequired();
+            entity.Property(x => x.ImageAlt).IsRequired();
             entity.HasOne(x => x.PortfolioContent)
                 .WithMany(x => x.PersonalItems)
                 .HasForeignKey(x => x.PortfolioContentId)

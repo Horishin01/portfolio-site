@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PortfolioSite.Data;
 using PortfolioSite.Models.Identity;
 using PortfolioSite.Models.Options;
 using PortfolioSite.Services;
+using System.IO.Compression;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +30,23 @@ builder.Services
 var connectionString = builder.Configuration.GetConnectionString("PortfolioDatabase")
     ?? throw new InvalidOperationException("Connection string 'PortfolioDatabase' is not configured.");
 
-builder.Services.AddDbContext<PortfolioDbContext>(options => PortfolioDatabaseOptions.Configure(options, connectionString));
+builder.Services.AddMemoryCache();
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(["image/svg+xml"]);
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+builder.Services.AddDbContextPool<PortfolioDbContext>(options => PortfolioDatabaseOptions.Configure(options, connectionString));
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
@@ -84,6 +102,7 @@ if (reverseProxyOptions.TrustAllProxies)
 }
 
 app.UseForwardedHeaders();
+app.UseResponseCompression();
 
 if (!app.Environment.IsDevelopment())
 {
@@ -98,7 +117,14 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        context.Context.Response.Headers.CacheControl = "public,max-age=2592000,immutable";
+        context.Context.Response.Headers.Expires = DateTimeOffset.UtcNow.AddDays(30).ToString("R");
+    }
+});
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();

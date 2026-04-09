@@ -62,6 +62,14 @@ public sealed class PortfolioEditorViewModel
         {
             category.Items ??= [];
         }
+
+        foreach (var item in Document.PersonalSection.Items)
+        {
+            item.DetailSummary ??= "";
+            item.DetailBody ??= "";
+            item.ImageSrc ??= "";
+            item.ImageAlt ??= "";
+        }
     }
 
     public void LoadStructuredEntriesFromDocument()

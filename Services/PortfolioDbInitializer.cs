@@ -75,6 +75,38 @@ public sealed class PortfolioDbInitializer
                 cancellationToken
             );
         }
+
+        if (!await HasSqliteColumnAsync("portfolio_personal_items", "ImageSrc", cancellationToken))
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE portfolio_personal_items ADD COLUMN ImageSrc TEXT NOT NULL DEFAULT '';",
+                cancellationToken
+            );
+        }
+
+        if (!await HasSqliteColumnAsync("portfolio_personal_items", "ImageAlt", cancellationToken))
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE portfolio_personal_items ADD COLUMN ImageAlt TEXT NOT NULL DEFAULT '';",
+                cancellationToken
+            );
+        }
+
+        if (!await HasSqliteColumnAsync("portfolio_personal_items", "DetailSummary", cancellationToken))
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE portfolio_personal_items ADD COLUMN DetailSummary TEXT NOT NULL DEFAULT '';",
+                cancellationToken
+            );
+        }
+
+        if (!await HasSqliteColumnAsync("portfolio_personal_items", "DetailBody", cancellationToken))
+        {
+            await _dbContext.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE portfolio_personal_items ADD COLUMN DetailBody TEXT NOT NULL DEFAULT '';",
+                cancellationToken
+            );
+        }
     }
 
     private async Task<bool> HasSqliteColumnAsync(string tableName, string columnName, CancellationToken cancellationToken)

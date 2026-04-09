@@ -183,24 +183,36 @@ public static class PortfolioDefaults
                         Category = "Home Lab",
                         Title = "検証環境の継続運用",
                         Summary = "クラウドとローカル環境の両方で、構成変更や監視設定を試せる小規模な検証基盤を継続的に触っている想定のダミーテキストです。",
+                        DetailSummary = "構成変更や障害試験をすぐ試せるよう、クラウドとローカルを行き来できる検証環境を個人で継続運用している想定です。",
+                        DetailBody = "Terraform を軸に構成を切り替えながら、監視、ログ収集、アラートの挙動を小さく検証しています。\n\n手元で再現した内容はメモと手順に残し、業務に近いオペレーションへ持ち込みやすい形に整理する想定です。",
                         Points = "Terraform で構成を切り替えながら検証し、変更手順を整理する\n監視設定やログ収集の挙動を確認し、業務に近い形で試す\n障害を意図的に起こして、初動確認の流れを見直す",
-                        Stack = "AWS\nTerraform\nLinux\nCloudWatch"
+                        Stack = "AWS\nTerraform\nLinux\nCloudWatch",
+                        ImageSrc = "",
+                        ImageAlt = ""
                     },
                     new PersonalItem
                     {
                         Category = "Automation",
                         Title = "個人用の運用スクリプトと IaC の試作",
                         Summary = "日々の確認作業を短くするためのスクリプトや、使い回せる Terraform モジュールを小さく作って試している想定のダミーテキストです。",
+                        DetailSummary = "手作業の確認や環境構築を減らすため、個人で使うスクリプトと IaC の部品を小さく試作し続けている想定です。",
+                        DetailBody = "運用フローの中で繰り返し発生する確認作業をスクリプト化し、第三者が読んでも追える粒度まで整えることを意識しています。\n\n同時に Terraform モジュールも試作し、命名、責務の切り方、README の残し方まで含めて再利用しやすい形を検証する想定です。",
                         Points = "サーバー状態確認やログ整形を自動化するスクリプトを試作する\n再利用しやすい命名やディレクトリ構成を検証する\nREADME や runbook を付けて、第三者が追いやすい形を意識する",
-                        Stack = "Python\nBash\nTerraform\nGitHub Actions"
+                        Stack = "Python\nBash\nTerraform\nGitHub Actions",
+                        ImageSrc = "",
+                        ImageAlt = ""
                     },
                     new PersonalItem
                     {
                         Category = "Learning",
                         Title = "学習内容の整理と技術アウトプット",
                         Summary = "資格学習や検証で得た内容を、あとから見返せるメモや記事として残している想定のダミーテキストです。",
+                        DetailSummary = "学習や検証で得た知見を流さず残すため、メモ、記事、図解として再編集する習慣を持っている想定です。",
+                        DetailBody = "理解が浅いまま終わらないよう、構成の違い、制約、つまずいた点を自分の言葉で整理して残しています。\n\nあとから見返せる形にしておくことで、再学習や類似案件への横展開がしやすい状態を目指す想定です。",
                         Points = "構成パターンごとの差分や注意点をメモ化する\n障害対応や監視改善で学んだ観点を短い記事にまとめる\n新しく触ったサービスの用途と制約を整理して記録する",
-                        Stack = "Markdown\nGitHub\nNotion\nDiagram"
+                        Stack = "Markdown\nGitHub\nNotion\nDiagram",
+                        ImageSrc = "",
+                        ImageAlt = ""
                     }
                 ]
             },

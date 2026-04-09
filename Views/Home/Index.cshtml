@@ -102,6 +102,8 @@
                 class="image-preview-media"
                 src="@Model.Profile.HeroImageSrc"
                 alt="@(string.IsNullOrWhiteSpace(Model.Profile.HeroImageAlt) ? $"{Model.Profile.Name} image" : Model.Profile.HeroImageAlt)"
+                fetchpriority="high"
+                decoding="async"
               />
           }
           else
@@ -318,25 +320,59 @@
       </div>
 
       <div class="personal-grid">
-        @foreach (var item in Model.PersonalSection.Items)
+        @for (var index = 0; index < Model.PersonalSection.Items.Count; index++)
         {
-            <article class="personal-card reveal">
-              <p class="personal-meta">@item.Category</p>
-              <h3>@item.Title</h3>
-              <p class="personal-summary">@item.Summary</p>
-              <ul class="bullet-list">
-                @foreach (var point in SplitLines(item.Points))
+            var item = Model.PersonalSection.Items[index];
+            var personalSlug = PersonalItemRouteHelper.CreateSlug(item.Title);
+            var personalSummary = string.IsNullOrWhiteSpace(item.Summary) ? item.DetailSummary : item.Summary;
+            var personalStack = SplitLines(item.Stack).Take(4).ToList();
+            var hasPersonalImage = !string.IsNullOrWhiteSpace(item.ImageSrc);
+            var personalImageAlt = string.IsNullOrWhiteSpace(item.ImageAlt) ? $"{item.Title} の写真" : item.ImageAlt;
+            var personalTopicCount = SplitLines(item.Points).Count();
+            <a
+              class="personal-card personal-card-link reveal"
+              asp-action="Personal"
+              asp-controller="Home"
+              asp-route-index="@index"
+              asp-route-slug="@(!string.IsNullOrWhiteSpace(personalSlug) ? personalSlug : null)"
+              aria-label="@($"{item.Title} の詳細を見る")"
+            >
+              @if (hasPersonalImage)
+              {
+                  <figure class="personal-card-media" aria-hidden="true">
+                    <img src="@item.ImageSrc" alt="@personalImageAlt" loading="lazy" decoding="async" />
+                  </figure>
+              }
+              <div class="personal-card-copy">
+                <div class="personal-scope-row">
+                  <span class="personal-scope-badge">一覧カード</span>
+                  <p class="personal-meta">@item.Category</p>
+                </div>
+                <h3>@item.Title</h3>
+                <p class="personal-summary">@personalSummary</p>
+                <p class="personal-summary-note">この一覧カードから個別ページへ移動します。</p>
+              </div>
+              <div class="personal-card-foot">
+                <div class="personal-card-stats" aria-label="取り組みの概要">
+                  <span>個別ページあり</span>
+                  <span>@(personalTopicCount == 0 ? "詳細項目未設定" : $"{personalTopicCount}項目")</span>
+                  @if (hasPersonalImage)
+                  {
+                      <span>画像あり</span>
+                  }
+                </div>
+                @if (personalStack.Count > 0)
                 {
-                    <li>@point</li>
+                    <ul class="stack-list">
+                      @foreach (var stackItem in personalStack)
+                      {
+                          <li>@stackItem</li>
+                      }
+                    </ul>
                 }
-              </ul>
-              <ul class="stack-list">
-                @foreach (var stackItem in SplitLines(item.Stack))
-                {
-                    <li>@stackItem</li>
-                }
-              </ul>
-            </article>
+                <span class="personal-cta">個別ページを見る</span>
+              </div>
+            </a>
         }
       </div>
     </section>
