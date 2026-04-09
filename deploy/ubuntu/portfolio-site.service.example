@@ -12,11 +12,8 @@ KillSignal=SIGINT
 SyslogIdentifier=portfolio-site
 User=www-data
 Group=www-data
-Environment=ASPNETCORE_ENVIRONMENT=Production
-Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
-Environment=ConnectionStrings__PortfolioDatabase=Server=127.0.0.1;Port=3306;Database=portfolio_site;User ID=portfolio_app;Password=change-me;CharSet=utf8mb4;
-Environment=AdminAccount__LoginId=admin
-Environment=AdminAccount__Password=ChangeThisImmediately123!
+# Generate /etc/portfolio-site/portfolio-site.env with scripts/create-runtime-env.sh
+EnvironmentFile=/etc/portfolio-site/portfolio-site.env
 
 [Install]
 WantedBy=multi-user.target

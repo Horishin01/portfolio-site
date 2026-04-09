@@ -3,6 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>PortfolioSite-c2e8c6f2-cb4f-4df0-a249-6b2bbd54a679</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

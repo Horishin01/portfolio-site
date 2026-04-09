@@ -17,18 +17,26 @@ builder.Services
     .PostConfigure(options =>
     {
         options.LoginId = string.IsNullOrWhiteSpace(options.LoginId) ? "admin" : options.LoginId.Trim();
-        options.Password = string.IsNullOrWhiteSpace(options.Password) ? "0000" : options.Password.Trim();
+        options.Password = options.Password?.Trim() ?? string.Empty;
     })
     .Validate(options => !string.IsNullOrWhiteSpace(options.LoginId), "AdminAccount:LoginId must not be empty.")
-    .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "AdminAccount:Password must not be empty.")
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.Password)
+            && !string.Equals(options.Password, "__SET_BY_SECRETS_OR_ENV__", StringComparison.Ordinal),
+        "AdminAccount:Password must be supplied via user-secrets or environment variable.")
     .ValidateOnStart();
 
 builder.Services
     .AddOptions<ReverseProxyOptions>()
     .Bind(builder.Configuration.GetSection("ReverseProxy"));
 
-var connectionString = builder.Configuration.GetConnectionString("PortfolioDatabase")
-    ?? throw new InvalidOperationException("Connection string 'PortfolioDatabase' is not configured.");
+var connectionString = builder.Configuration.GetConnectionString("PortfolioDatabase");
+if (string.IsNullOrWhiteSpace(connectionString)
+    || string.Equals(connectionString, "__SET_BY_SECRETS_OR_ENV__", StringComparison.Ordinal))
+{
+    throw new InvalidOperationException(
+        "Connection string 'PortfolioDatabase' is not configured. Set it via dotnet user-secrets for development or environment variable/env file for runtime.");
+}
 
 builder.Services.AddMemoryCache();
 builder.Services.AddResponseCompression(options =>

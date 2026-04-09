@@ -4,3 +4,4 @@ obj/
 .publish/
 /LocalData/
 /wwwroot/uploads/
+/.secrets/
