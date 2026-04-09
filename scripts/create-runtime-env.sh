@@ -4,14 +4,31 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/create-runtime-env.sh [output_path]
+  bash scripts/create-runtime-env.sh [output_path]
+  ./scripts/create-runtime-env.sh [output_path]
 
 Creates a shell/systemd-compatible env file for runtime settings.
 Use this for shared runtime or server deployment, not for local development secrets.
 
 Examples:
-  scripts/create-runtime-env.sh
-  scripts/create-runtime-env.sh /etc/portfolio-site/portfolio-site.env
+  bash scripts/create-runtime-env.sh
+  bash scripts/create-runtime-env.sh /etc/portfolio-site/portfolio-site.env
+
+Prompted values:
+  ASPNETCORE_ENVIRONMENT
+    Usually Production on server
+  ASPNETCORE_URLS
+    Usually http://127.0.0.1:5000 behind nginx
+  ConnectionStrings__PortfolioDatabase
+    MySQL connection string
+  AdminAccount__LoginId
+    Admin login ID for /admin/login
+  AdminAccount__Password
+    Admin password for /admin/login
+  ReverseProxy__TrustAllProxies
+    Usually false on same-host nginx reverse proxy
+
+Enter raw values without surrounding quotes.
 
 The generated file can be used in either of these ways:
   set -a; . ./.secrets/portfolio-site.env; set +a

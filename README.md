@@ -113,8 +113,42 @@ dotnet run --launch-profile PortfolioSite --project PortfolioSite.csproj
 2. 実行用 env ファイルを shell スクリプトで作成します。
 3. env ファイルを読み込んでからアプリを起動します。
 
+`create-runtime-env.sh` の起動方法:
+
 ```bash
-scripts/create-runtime-env.sh
+bash scripts/create-runtime-env.sh
+```
+
+出力先を明示したい場合:
+
+```bash
+bash scripts/create-runtime-env.sh ./.secrets/portfolio-site.env
+```
+
+この script で入力する項目:
+
+- `ASPNETCORE_ENVIRONMENT`
+  本番では通常 `Production`
+- `ASPNETCORE_URLS`
+  Nginx の背後で動かすなら通常 `http://127.0.0.1:5000`
+- `ConnectionStrings__PortfolioDatabase`
+  接続先 MySQL の接続文字列
+- `AdminAccount__LoginId`
+  `/admin/login` に使うログイン ID
+- `AdminAccount__Password`
+  `/admin/login` に使うパスワード
+- `ReverseProxy__TrustAllProxies`
+  同一ホストの Nginx リバースプロキシなら通常 `false`
+
+入力時の注意:
+
+- 値は `"..."` で囲まず、そのまま入力します
+- `ConnectionStrings__PortfolioDatabase` には MySQL の接続文字列をそのまま入れます
+- 接続文字列の例:
+  `Server=127.0.0.1;Port=3306;Database=portfolio_site;User ID=portfolio_app;Password=change-me;CharSet=utf8mb4;`
+
+```bash
+bash scripts/create-runtime-env.sh
 set -a
 . ./.secrets/portfolio-site.env
 set +a
@@ -135,11 +169,26 @@ Ubuntu Server は公開用の実行環境として使う前提です。サーバ
 2. 手元の開発マシンで release publish を作成します。Ubuntu 側で `dotnet publish` や SDK は不要です。
 3. publish 済みファイル一式を Ubuntu の任意ディレクトリへ配置します。
 4. `www-data` など実行ユーザーがアプリ配置先を読めること、必要なら `wwwroot/uploads/` に書き込めることを確認します。
-5. `scripts/create-runtime-env.sh /etc/portfolio-site/portfolio-site.env` で env ファイルを作成し、秘密情報をそこへ保存します。
+5. `bash scripts/create-runtime-env.sh /etc/portfolio-site/portfolio-site.env` で env ファイルを作成し、秘密情報をそこへ保存します。
 6. `deploy/ubuntu/portfolio-site.service.example` を `/etc/systemd/system/portfolio-site.service` として配置します。
 7. `deploy/ubuntu/nginx-portfolio-site.conf.example` を Nginx 設定へコピーして `server_name` を変更します。
 8. `systemctl daemon-reload` と `systemctl enable --now portfolio-site` を実行します。
 9. `nginx -t` の後に `systemctl reload nginx` を実行します。
+
+サーバーで script 実行時に入力する内容:
+
+- `ASPNETCORE_ENVIRONMENT`
+  `Production`
+- `ASPNETCORE_URLS`
+  `http://127.0.0.1:5000`
+- `ConnectionStrings__PortfolioDatabase`
+  本番 MySQL への接続文字列
+- `AdminAccount__LoginId`
+  管理画面ログイン ID
+- `AdminAccount__Password`
+  管理画面ログインパスワード
+- `ReverseProxy__TrustAllProxies`
+  同一サーバー内の Nginx で受けるなら `false`
 
 最初にサーバーへ入れておくもの:
 
@@ -151,10 +200,11 @@ systemd 反映の流れ:
 
 ```bash
 sudo mkdir -p /etc/portfolio-site
-sudo /var/www/portfolio-site/current/scripts/create-runtime-env.sh /etc/portfolio-site/portfolio-site.env
+cd /var/www/portfolio-site/current
+sudo bash scripts/create-runtime-env.sh /etc/portfolio-site/portfolio-site.env
 sudo chown root:root /etc/portfolio-site/portfolio-site.env
 sudo chmod 600 /etc/portfolio-site/portfolio-site.env
-sudo cp /var/www/portfolio-site/current/deploy/ubuntu/portfolio-site.service.example /etc/systemd/system/portfolio-site.service
+sudo cp deploy/ubuntu/portfolio-site.service.example /etc/systemd/system/portfolio-site.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now portfolio-site
 sudo systemctl status portfolio-site
@@ -163,7 +213,8 @@ sudo systemctl status portfolio-site
 Nginx 反映の流れ:
 
 ```bash
-sudo cp /var/www/portfolio-site/current/deploy/ubuntu/nginx-portfolio-site.conf.example /etc/nginx/sites-available/portfolio-site.conf
+cd /var/www/portfolio-site/current
+sudo cp deploy/ubuntu/nginx-portfolio-site.conf.example /etc/nginx/sites-available/portfolio-site.conf
 sudo ln -sf /etc/nginx/sites-available/portfolio-site.conf /etc/nginx/sites-enabled/portfolio-site.conf
 sudo nginx -t
 sudo systemctl reload nginx
