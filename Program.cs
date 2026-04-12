@@ -16,14 +16,14 @@ builder.Services
     .Bind(builder.Configuration.GetSection("AdminAccount"))
     .PostConfigure(options =>
     {
-        options.LoginId = string.IsNullOrWhiteSpace(options.LoginId) ? "admin" : options.LoginId.Trim();
-        options.Password = options.Password?.Trim() ?? string.Empty;
+        var loginId = options.LoginId?.Trim();
+        var password = options.Password?.Trim();
+
+        options.LoginId = IsUnsetAdminSetting(loginId) ? "Admin" : loginId!;
+        options.Password = IsUnsetAdminSetting(password) ? "0000" : password!;
     })
     .Validate(options => !string.IsNullOrWhiteSpace(options.LoginId), "AdminAccount:LoginId must not be empty.")
-    .Validate(
-        options => !string.IsNullOrWhiteSpace(options.Password)
-            && !string.Equals(options.Password, "__SET_BY_SECRETS_OR_ENV__", StringComparison.Ordinal),
-        "AdminAccount:Password must be supplied via user-secrets or environment variable.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "AdminAccount:Password must not be empty.")
     .ValidateOnStart();
 
 builder.Services
@@ -143,3 +143,9 @@ app.MapControllerRoute(
 );
 
 app.Run();
+
+static bool IsUnsetAdminSetting(string? value)
+{
+    return string.IsNullOrWhiteSpace(value)
+        || string.Equals(value, "__SET_BY_SECRETS_OR_ENV__", StringComparison.Ordinal);
+}

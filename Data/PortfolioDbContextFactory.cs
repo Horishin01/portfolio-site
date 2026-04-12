@@ -13,6 +13,7 @@ public sealed class PortfolioDbContextFactory : IDesignTimeDbContextFactory<Port
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional: false)
             .AddJsonFile($"appsettings.{environmentName}.json", optional: true)
+            .AddUserSecrets<Program>(optional: true)
             .AddEnvironmentVariables()
             .Build();
 

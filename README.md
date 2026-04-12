@@ -66,9 +66,9 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
 ## Configuration
 
 - `AdminAccount:LoginId`
-  `/admin/login` で使う管理ログイン ID です。未指定なら `admin` です。
+  `/admin/login` で使う管理ログイン ID です。未指定なら `Admin` です。
 - `AdminAccount:Password`
-  管理者の平文パスワードです。起動時にアプリ側でハッシュ化して保存します。repo には置かず、開発では `user-secrets`、本番では env ファイルまたは環境変数で渡してください。
+  管理者の平文パスワードです。起動時にアプリ側でハッシュ化して保存します。未指定なら `0000` を使います。必要なら `user-secrets`、env ファイル、環境変数で上書きできます。
 - `ConnectionStrings:PortfolioDatabase`
   開発では SQLite、その他の環境では MySQL を想定します。repo 上の `appsettings.json` にはダミー値を置き、実値は開発では `user-secrets`、本番では `ConnectionStrings__PortfolioDatabase` で渡してください。
 - `ReverseProxy:TrustAllProxies`
@@ -78,10 +78,9 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
 
 VS Code の `F5` と `PortfolioSite` の launch profile は `Development` で起動します。このとき保存先は SQLite `LocalData/Debug/portfolio-site.dev.db` です。ローカル MySQL は不要です。
 
-1. 開発用の秘密情報を `user-secrets` に設定します。
-2. 起動します。
+未設定のまま起動すると、管理ログインは `Admin / 0000` になります。必要なら `user-secrets` で上書きします。
 
-最小構成:
+上書きしたい場合:
 
 ```bash
 dotnet user-secrets set "AdminAccount:Password" "ChangeThisForDev123!"
@@ -90,7 +89,7 @@ dotnet user-secrets set "AdminAccount:Password" "ChangeThisForDev123!"
 管理ログイン ID も変えたい場合:
 
 ```bash
-dotnet user-secrets set "AdminAccount:LoginId" "admin"
+dotnet user-secrets set "AdminAccount:LoginId" "Admin"
 ```
 
 開発でも MySQL を使いたい場合だけ、接続文字列も `user-secrets` へ入れます。SQLite のままなら不要です。
@@ -138,10 +137,9 @@ bash scripts/create-runtime-env.sh ./.secrets/portfolio-site.env
   Nginx または Apache の背後で動かすなら通常 `http://127.0.0.1:5000`
 - `ConnectionStrings__PortfolioDatabase`
   接続先 MySQL の接続文字列
-- `AdminAccount__LoginId`
-  `/admin/login` に使うログイン ID
-- `AdminAccount__Password`
-  `/admin/login` に使うパスワード
+- `Configure admin credentials?`
+  `yes` なら `/admin/login` 用の ID とパスワードを続けて入力
+  `no` なら `Admin / 0000` を自動設定
 - `ReverseProxy__TrustAllProxies`
   同一ホストの Nginx または Apache リバースプロキシなら通常 `false`
 
@@ -188,10 +186,9 @@ Ubuntu Server は公開用の実行環境として使う前提です。サーバ
   `http://127.0.0.1:5000`
 - `ConnectionStrings__PortfolioDatabase`
   本番 MySQL への接続文字列
-- `AdminAccount__LoginId`
-  管理画面ログイン ID
-- `AdminAccount__Password`
-  管理画面ログインパスワード
+- `Configure admin credentials?`
+  `yes` なら管理画面ログイン ID とパスワードを入力
+  `no` なら `Admin / 0000`
 - `ReverseProxy__TrustAllProxies`
   同一サーバー内の Nginx または Apache で受けるなら `false`
 
@@ -295,8 +292,8 @@ ConnectionStrings__PortfolioDatabase="Server=127.0.0.1;Port=3306;Database=portfo
 管理者設定の例:
 
 ```bash
-AdminAccount__LoginId="admin"
-AdminAccount__Password="ChangeThisImmediately123!"
+AdminAccount__LoginId="Admin"
+AdminAccount__Password="0000"
 ```
 
 ## Data Model

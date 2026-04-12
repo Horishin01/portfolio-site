@@ -21,10 +21,9 @@ Prompted values:
     Usually http://127.0.0.1:5000 behind nginx
   ConnectionStrings__PortfolioDatabase
     MySQL connection string
-  AdminAccount__LoginId
-    Admin login ID for /admin/login
-  AdminAccount__Password
-    Admin password for /admin/login
+  Configure admin credentials?
+    yes: prompt for AdminAccount__LoginId and AdminAccount__Password
+    no: write Admin / 0000 automatically
   ReverseProxy__TrustAllProxies
     Usually false on same-host nginx reverse proxy
 
@@ -83,13 +82,33 @@ prompt_secret_required() {
 
   while true; do
     read -r -s -p "${message}: " input
-    echo
+    printf '\n' >&2
     if [[ -n "$input" ]]; then
       printf '%s' "$input"
       return
     fi
 
     echo "Value is required." >&2
+  done
+}
+
+prompt_yes_no() {
+  local message="$1"
+  local default_value="$2"
+  local input=""
+  local normalized=""
+
+  while true; do
+    read -r -p "${message} [${default_value}]: " input
+    normalized="${input:-$default_value}"
+    normalized="$(printf '%s' "$normalized" | tr '[:upper:]' '[:lower:]')"
+
+    if [[ "$normalized" == "yes" || "$normalized" == "no" ]]; then
+      printf '%s' "$normalized"
+      return
+    fi
+
+    echo "Please enter yes or no." >&2
   done
 }
 
@@ -138,12 +157,23 @@ if [[ -z "$db_connection" ]]; then
   db_connection="$(prompt_required "ConnectionStrings__PortfolioDatabase")"
 fi
 
-if [[ -z "$admin_login_id" ]]; then
-  admin_login_id="$(prompt_with_default "AdminAccount__LoginId" "admin")"
-fi
+if [[ -z "$admin_login_id" && -z "$admin_password" ]]; then
+  configure_admin_credentials="$(prompt_yes_no "Configure admin credentials? (yes/no)" "no")"
+  if [[ "$configure_admin_credentials" == "yes" ]]; then
+    admin_login_id="$(prompt_required "AdminAccount__LoginId")"
+    admin_password="$(prompt_secret_required "AdminAccount__Password")"
+  else
+    admin_login_id="Admin"
+    admin_password="0000"
+  fi
+else
+  if [[ -z "$admin_login_id" ]]; then
+    admin_login_id="Admin"
+  fi
 
-if [[ -z "$admin_password" ]]; then
-  admin_password="$(prompt_secret_required "AdminAccount__Password")"
+  if [[ -z "$admin_password" ]]; then
+    admin_password="0000"
+  fi
 fi
 
 if [[ -z "$trust_all_proxies" ]]; then
