@@ -24,8 +24,10 @@ Prompted values:
   Configure admin credentials?
     yes: prompt for AdminAccount__LoginId and AdminAccount__Password
     no: write Admin / 0000 automatically
-  ReverseProxy__TrustAllProxies
-    Usually false on same-host nginx reverse proxy
+  ReverseProxy__KnownProxies
+    Optional comma-separated IPs for trusted reverse proxies
+  ReverseProxy__KnownNetworks
+    Optional comma-separated CIDR blocks for trusted reverse proxy networks
 
 Enter raw values without surrounding quotes.
 
@@ -143,7 +145,8 @@ aspnetcore_urls="${PORTFOLIO_ASPNETCORE_URLS:-}"
 db_connection="${PORTFOLIO_DATABASE_CONNECTION:-}"
 admin_login_id="${PORTFOLIO_ADMIN_LOGIN_ID:-}"
 admin_password="${PORTFOLIO_ADMIN_PASSWORD:-}"
-trust_all_proxies="${PORTFOLIO_TRUST_ALL_PROXIES:-}"
+known_proxies="${PORTFOLIO_KNOWN_PROXIES:-}"
+known_networks="${PORTFOLIO_KNOWN_NETWORKS:-}"
 
 if [[ -z "$aspnetcore_environment" ]]; then
   aspnetcore_environment="$(prompt_with_default "ASPNETCORE_ENVIRONMENT" "Production")"
@@ -176,8 +179,12 @@ else
   fi
 fi
 
-if [[ -z "$trust_all_proxies" ]]; then
-  trust_all_proxies="$(prompt_with_default "ReverseProxy__TrustAllProxies" "false")"
+if [[ -z "$known_proxies" ]]; then
+  known_proxies="$(prompt_with_default "ReverseProxy__KnownProxies" "")"
+fi
+
+if [[ -z "$known_networks" ]]; then
+  known_networks="$(prompt_with_default "ReverseProxy__KnownNetworks" "")"
 fi
 
 mkdir -p "$(dirname "$output_path")"
@@ -191,7 +198,12 @@ mkdir -p "$(dirname "$output_path")"
   write_entry "ConnectionStrings__PortfolioDatabase" "$db_connection"
   write_entry "AdminAccount__LoginId" "$admin_login_id"
   write_entry "AdminAccount__Password" "$admin_password"
-  write_entry "ReverseProxy__TrustAllProxies" "$trust_all_proxies"
+  if [[ -n "$known_proxies" ]]; then
+    write_entry "ReverseProxy__KnownProxies" "$known_proxies"
+  fi
+  if [[ -n "$known_networks" ]]; then
+    write_entry "ReverseProxy__KnownNetworks" "$known_networks"
+  fi
 } > "$output_path"
 
 chmod 600 "$output_path"

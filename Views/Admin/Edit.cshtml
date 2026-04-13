@@ -63,8 +63,10 @@
         : tone is "warning" ? "is-warning"
         : string.Empty;
     var doc = Model.Document;
-    var hasFavicon = !string.IsNullOrWhiteSpace(doc.FaviconSrc);
-    var hasHeroImage = !string.IsNullOrWhiteSpace(doc.Profile.HeroImageSrc);
+    var faviconPreviewSrc = PublicUrlSanitizer.SanitizeFaviconUrl(doc.FaviconSrc);
+    var heroImagePreviewSrc = PublicUrlSanitizer.SanitizeImageUrl(doc.Profile.HeroImageSrc);
+    var hasFavicon = !string.IsNullOrWhiteSpace(faviconPreviewSrc);
+    var hasHeroImage = !string.IsNullOrWhiteSpace(heroImagePreviewSrc);
     var heroMark = string.IsNullOrWhiteSpace(doc.Profile.ShortName) ? "IMG" : doc.Profile.ShortName;
     var totalCards = doc.Profile.Highlights.Count
         + doc.CareerSection.Items.Count
@@ -207,7 +209,7 @@
                   <img
                     class="image-preview-media"
                     id="faviconPreviewMedia"
-                    src="@(hasFavicon ? doc.FaviconSrc : string.Empty)"
+                    src="@(hasFavicon ? faviconPreviewSrc : string.Empty)"
                     alt="ファビコンプレビュー"
                     hidden="@(!hasFavicon)"
                   />
@@ -222,9 +224,10 @@
 
                 <div class="field favicon-upload-field">
                   <label asp-for="FaviconFile">ファビコンアップロード</label>
-                  <input asp-for="FaviconFile" id="faviconFile" type="file" accept=".ico,.png,.svg,.webp,.jpg,.jpeg,.gif" />
-                  <p class="field-help">ICO / PNG / SVG / WEBP / JPG / GIF に対応しています。1MBまでアップロードでき、ファビコンURLより優先して保存されます。</p>
+                  <input asp-for="FaviconFile" id="faviconFile" type="file" accept=".ico,.png,.webp,.jpg,.jpeg,.gif" />
+                  <p class="field-help">ICO / PNG / WEBP / JPG / GIF に対応しています。1MBまでアップロードでき、ファビコンURLより優先して保存されます。</p>
                   <p class="field-help">未設定の場合は既定のアイコンを使用します。</p>
+                  <p class="field-help">URLは / で始まるサイト内パス、または http/https の画像URLのみ指定できます。SVG は受け付けません。</p>
 
                   <div class="hero-upload-meta">
                     <div class="field">
@@ -259,7 +262,7 @@
                   <img
                     class="image-preview-media"
                     id="heroImagePreviewMedia"
-                    src="@(hasHeroImage ? doc.Profile.HeroImageSrc : string.Empty)"
+                    src="@(hasHeroImage ? heroImagePreviewSrc : string.Empty)"
                     alt="@(string.IsNullOrWhiteSpace(doc.Profile.HeroImageAlt) ? "ヒーロー画像プレビュー" : doc.Profile.HeroImageAlt)"
                     hidden="@(!hasHeroImage)"
                   />
@@ -276,6 +279,7 @@
                   <input asp-for="HeroImageFile" id="heroImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,.gif" />
                   <p class="field-help">JPG / PNG / WEBP / GIF に対応しています。5MBまでアップロードでき、画像URLより優先して保存されます。</p>
                   <p class="field-help">画像をアップロードしない場合は、下の画像URLを使用します。画像の説明文もここで設定できます。</p>
+                  <p class="field-help">画像URLは / で始まるサイト内パス、または http/https の URL のみ指定できます。</p>
 
                   <div class="hero-upload-meta">
                     <div class="field">
@@ -795,7 +799,8 @@
               {
                   var selectedPersonalStack = SplitSelectionValues(doc.PersonalSection.Items[i].Stack);
                   var personalStackOptions = BuildSelectionOptions(PortfolioEditorOptionCatalog.TechnologyOptions, doc.PersonalSection.Items[i].Stack);
-                  var hasPersonalImage = !string.IsNullOrWhiteSpace(doc.PersonalSection.Items[i].ImageSrc);
+                  var personalImagePreviewSrc = PublicUrlSanitizer.SanitizeImageUrl(doc.PersonalSection.Items[i].ImageSrc);
+                  var hasPersonalImage = !string.IsNullOrWhiteSpace(personalImagePreviewSrc);
                   var personalImageFieldName = GetPersonalItemImageFieldName(i);
                   var personalSlug = PersonalItemRouteHelper.CreateSlug(doc.PersonalSection.Items[i].Title);
                   var hasPersonalDetailContent =
@@ -897,7 +902,7 @@
                                   <img
                                     class="image-preview-media"
                                     id="personalImagePreviewMedia-@i"
-                                    src="@(hasPersonalImage ? doc.PersonalSection.Items[i].ImageSrc : string.Empty)"
+                                    src="@(hasPersonalImage ? personalImagePreviewSrc : string.Empty)"
                                     alt="@(string.IsNullOrWhiteSpace(doc.PersonalSection.Items[i].ImageAlt) ? $"{doc.PersonalSection.Items[i].Title} の画像プレビュー" : doc.PersonalSection.Items[i].ImageAlt)"
                                     hidden="@(!hasPersonalImage)"
                                   />
@@ -915,6 +920,7 @@
                                   <input id="personalImageFile-@i" name="@personalImageFieldName" type="file" accept=".jpg,.jpeg,.png,.webp,.gif" />
                                   <p class="field-help">JPG / PNG / WEBP / GIF に対応しています。5MBまでアップロードでき、画像URLより優先して保存されます。</p>
                                   <p class="field-help">写真をアップロードしない場合は、下の画像URLを使用します。説明文は alt として保存されます。</p>
+                                  <p class="field-help">画像URLは / で始まるサイト内パス、または http/https の URL のみ指定できます。</p>
 
                                   <div class="hero-upload-meta">
                                     <div class="field">
@@ -1016,6 +1022,7 @@
                       <div class="field">
                         <label asp-for="Document.Contact.Links[i].Href"></label>
                         <input asp-for="Document.Contact.Links[i].Href" />
+                        <p class="field-help">/ で始まるサイト内パス、または http/https / mailto / tel の URL を指定できます。</p>
                       </div>
                     </div>
                   </article>

@@ -33,7 +33,8 @@
     var detailParagraphs = SplitParagraphs(detailBody);
     var detailPoints = SplitLines(item.Points);
     var stackItems = SplitLines(item.Stack);
-    var hasItemImage = !string.IsNullOrWhiteSpace(item.ImageSrc);
+    var itemImageSrc = PublicUrlSanitizer.SanitizeImageUrl(item.ImageSrc);
+    var hasItemImage = !string.IsNullOrWhiteSpace(itemImageSrc);
     var itemImageAlt = string.IsNullOrWhiteSpace(item.ImageAlt) ? $"{item.Title} の写真" : item.ImageAlt;
     var shortName = string.IsNullOrWhiteSpace(document.Profile.ShortName)
         ? GetInitials(document.Profile.Name)
@@ -96,7 +97,7 @@
           @if (hasItemImage)
           {
               <img
-                src="@item.ImageSrc"
+                src="@itemImageSrc"
                 alt="@itemImageAlt"
                 fetchpriority="high"
                 decoding="async"

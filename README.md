@@ -48,6 +48,7 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
 ├── appsettings.json
 ├── appsettings.Development.json
 ├── scripts/
+│   ├── add-migration.sh
 │   ├── create-runtime-env.sh
 │   └── stop-portfolio-site.ps1
 ├── portfolio-site.sln
@@ -71,8 +72,10 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
   管理者の平文パスワードです。起動時にアプリ側でハッシュ化して保存します。未指定なら `0000` を使います。必要なら `user-secrets`、env ファイル、環境変数で上書きできます。
 - `ConnectionStrings:PortfolioDatabase`
   開発では SQLite、その他の環境では MySQL を想定します。repo 上の `appsettings.json` にはダミー値を置き、実値は開発では `user-secrets`、本番では `ConnectionStrings__PortfolioDatabase` で渡してください。
-- `ReverseProxy:TrustAllProxies`
-  Docker や別ホストのリバースプロキシから `X-Forwarded-*` を受ける場合に `true` を設定します。同一ホスト上の Nginx または Apache から `127.0.0.1` 経由で流す構成なら通常は不要です。
+- `ReverseProxy:KnownProxies`
+  `X-Forwarded-*` を信頼する必要があるリバースプロキシの IP をカンマ区切りで指定します。同一ホスト上の Nginx または Apache から `127.0.0.1` 経由で流す構成なら通常は不要です。
+- `ReverseProxy:KnownNetworks`
+  信頼するリバースプロキシのネットワークを CIDR でカンマ区切り指定します。例: `10.0.0.0/24`
 
 ## Development Run
 
@@ -109,7 +112,41 @@ dotnet run --launch-profile PortfolioSite --project PortfolioSite.csproj
 - `http://localhost:5078/`
 - `http://localhost:5078/admin/login`
 
-開発環境では起動時に必要なフォルダを自動作成し、SQLite と Identity テーブルも初期化します。旧 JSON スキーマの SQLite ファイルが残っている場合は、一度作り直して新スキーマへ揃えます。
+開発環境では起動時に必要なフォルダを自動作成し、SQLite と Identity テーブルも migration 経由で初期化します。過去に `EnsureCreated` で作った SQLite DB でも、現在スキーマと一致していれば migration 履歴を自動ベースライン化してから起動します。旧 JSON スキーマの SQLite ファイルが残っている場合は、一度作り直して新スキーマへ揃えます。
+
+## Schema Management
+
+DB スキーマの正本は `Migrations/` です。今後の列追加やテーブル追加では、`EnsureCreated` や手動 `ALTER TABLE` ではなく、必ず migration を追加してください。
+
+基本ルール:
+
+- アプリ起動時の DB 更新は `Database.MigrateAsync()` のみを使います
+- SQLite と MySQL の両方で同じ migration セットを適用します
+- 開発 DB が既存でも、migration 履歴がなければ起動時に自動でベースライン化します
+- これ以降、スキーマ差分を埋めるためのアプリ側手書き SQL は増やさない前提です
+
+推奨手順:
+
+1. `Data/` と `Models/` のエンティティを変更する
+2. `bash scripts/add-migration.sh <MigrationName>` で migration を追加する
+3. `dotnet build PortfolioSite.csproj` でビルド確認する
+4. ローカル起動して SQLite に自動適用されることを確認する
+5. 本番は再起動時に MySQL へ自動適用される
+
+`scripts/add-migration.sh` は既定で `mysql` を design-time provider に使います。これで migration snapshot の provider 依存差分がぶれにくくなります。
+
+例:
+
+```bash
+bash scripts/add-migration.sh AddProjectTags
+```
+
+必要なら provider を明示できます。
+
+```bash
+bash scripts/add-migration.sh AddProjectTags sqlite
+dotnet ef database update --project PortfolioSite.csproj --context PortfolioDbContext -- --provider sqlite
+```
 
 ## Production / MySQL Run
 
@@ -140,8 +177,10 @@ bash scripts/create-runtime-env.sh ./.secrets/portfolio-site.env
 - `Configure admin credentials?`
   `yes` なら `/admin/login` 用の ID とパスワードを続けて入力
   `no` なら `Admin / 0000` を自動設定
-- `ReverseProxy__TrustAllProxies`
-  同一ホストの Nginx または Apache リバースプロキシなら通常 `false`
+- `ReverseProxy__KnownProxies`
+  必要な場合だけ、信頼するリバースプロキシ IP をカンマ区切りで指定
+- `ReverseProxy__KnownNetworks`
+  必要な場合だけ、信頼するリバースプロキシネットワークを CIDR のカンマ区切りで指定
 
 入力時の注意:
 
@@ -189,8 +228,10 @@ Ubuntu Server は公開用の実行環境として使う前提です。サーバ
 - `Configure admin credentials?`
   `yes` なら管理画面ログイン ID とパスワードを入力
   `no` なら `Admin / 0000`
-- `ReverseProxy__TrustAllProxies`
-  同一サーバー内の Nginx または Apache で受けるなら `false`
+- `ReverseProxy__KnownProxies`
+  同一サーバー内の Nginx または Apache で受けるなら通常は空欄
+- `ReverseProxy__KnownNetworks`
+  同一サーバー内の Nginx または Apache で受けるなら通常は空欄
 
 最初にサーバーへ入れておくもの:
 
@@ -263,13 +304,14 @@ systemd / リバースプロキシのサンプル:
 - `deploy/ubuntu/nginx-portfolio-site.conf.example`
 - `deploy/ubuntu/apache-portfolio-site.conf.example`
 
-別コンテナや別ホストのプロキシから転送する場合は、必要に応じて次を設定してください。
+別コンテナや別ホストのプロキシから転送する場合は、必要に応じて信頼する IP または CIDR を明示してください。
 
 ```bash
-export ReverseProxy__TrustAllProxies=true
+export ReverseProxy__KnownProxies="10.0.0.5,10.0.0.6"
+export ReverseProxy__KnownNetworks="10.0.0.0/24"
 ```
 
-この設定は信頼できる内部ネットワーク上のリバースプロキシに限定して使ってください。
+`TrustAllProxies` は安全上の理由でサポートしていません。
 
 ## MySQL Example
 

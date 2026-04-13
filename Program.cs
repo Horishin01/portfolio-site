@@ -11,6 +11,11 @@ using System.IO.Compression;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.AddServerHeader = false;
+});
+
 builder.Services
     .AddOptions<AdminAccountOptions>()
     .Bind(builder.Configuration.GetSection("AdminAccount"))
@@ -28,7 +33,12 @@ builder.Services
 
 builder.Services
     .AddOptions<ReverseProxyOptions>()
-    .Bind(builder.Configuration.GetSection("ReverseProxy"));
+    .Bind(builder.Configuration.GetSection("ReverseProxy"))
+    .Validate(
+        options => options.GetValidationErrors().Count == 0,
+        "ReverseProxy settings are invalid. Use KnownProxies or KnownNetworks, and do not set TrustAllProxies."
+    )
+    .ValidateOnStart();
 
 var connectionString = builder.Configuration.GetConnectionString("PortfolioDatabase");
 if (string.IsNullOrWhiteSpace(connectionString)
@@ -100,14 +110,9 @@ builder.Services.AddScoped<PortfolioContentService>();
 builder.Services.AddScoped<PortfolioDbInitializer>();
 
 var app = builder.Build();
-
-var reverseProxyOptions = app.Services.GetRequiredService<IOptions<ReverseProxyOptions>>().Value;
-if (reverseProxyOptions.TrustAllProxies)
-{
-    var forwardedHeadersOptions = app.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value;
-    forwardedHeadersOptions.KnownNetworks.Clear();
-    forwardedHeadersOptions.KnownProxies.Clear();
-}
+app.Services.GetRequiredService<IOptions<ReverseProxyOptions>>()
+    .Value
+    .ApplyTo(app.Services.GetRequiredService<IOptions<ForwardedHeadersOptions>>().Value);
 
 app.UseForwardedHeaders();
 app.UseResponseCompression();
@@ -117,6 +122,32 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        var headers = context.Response.Headers;
+        headers["Content-Security-Policy"] =
+            "default-src 'self'; " +
+            "base-uri 'self'; " +
+            "connect-src 'self'; " +
+            "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; " +
+            "form-action 'self'; " +
+            "frame-ancestors 'self'; " +
+            "img-src 'self' data: http: https:; " +
+            "object-src 'none'; " +
+            "script-src 'self'; " +
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com";
+        headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
+        headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+        headers["X-Content-Type-Options"] = "nosniff";
+        headers["X-Frame-Options"] = "SAMEORIGIN";
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
 
 await using (var scope = app.Services.CreateAsyncScope())
 {

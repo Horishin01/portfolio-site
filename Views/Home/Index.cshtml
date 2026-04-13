@@ -27,20 +27,22 @@
         ).ToUpperInvariant();
     }
 
-    static bool IsExternalLink(string? href)
-    {
-        return !string.IsNullOrWhiteSpace(href)
-            && (href.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                || href.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
-    }
-
     var shortName = string.IsNullOrWhiteSpace(Model.Profile.ShortName)
         ? GetInitials(Model.Profile.Name)
         : Model.Profile.ShortName;
     var footerRole = string.IsNullOrWhiteSpace(Model.FooterRole)
         ? Model.Profile.Role
         : Model.FooterRole;
-    var hasHeroImage = !string.IsNullOrWhiteSpace(Model.Profile.HeroImageSrc);
+    var heroImageSrc = PublicUrlSanitizer.SanitizeImageUrl(Model.Profile.HeroImageSrc);
+    var hasHeroImage = !string.IsNullOrWhiteSpace(heroImageSrc);
+    var safeContactLinks = Model.Contact.Links
+        .Select(link => new
+        {
+            Link = link,
+            Href = PublicUrlSanitizer.SanitizeLinkUrl(link.Href)
+        })
+        .Where(entry => !string.IsNullOrWhiteSpace(entry.Href))
+        .ToList();
 }
 <div class="background-grid" aria-hidden="true"></div>
 <div class="background-orb background-orb-left" aria-hidden="true"></div>
@@ -100,7 +102,7 @@
           {
               <img
                 class="image-preview-media"
-                src="@Model.Profile.HeroImageSrc"
+                src="@heroImageSrc"
                 alt="@(string.IsNullOrWhiteSpace(Model.Profile.HeroImageAlt) ? $"{Model.Profile.Name} image" : Model.Profile.HeroImageAlt)"
                 fetchpriority="high"
                 decoding="async"
@@ -326,7 +328,8 @@
             var personalSlug = PersonalItemRouteHelper.CreateSlug(item.Title);
             var personalSummary = string.IsNullOrWhiteSpace(item.Summary) ? item.DetailSummary : item.Summary;
             var personalStack = SplitLines(item.Stack).Take(4).ToList();
-            var hasPersonalImage = !string.IsNullOrWhiteSpace(item.ImageSrc);
+            var personalImageSrc = PublicUrlSanitizer.SanitizeImageUrl(item.ImageSrc);
+            var hasPersonalImage = !string.IsNullOrWhiteSpace(personalImageSrc);
             var personalImageAlt = string.IsNullOrWhiteSpace(item.ImageAlt) ? $"{item.Title} の写真" : item.ImageAlt;
             var personalTopicCount = SplitLines(item.Points).Count();
             <a
@@ -340,7 +343,7 @@
               @if (hasPersonalImage)
               {
                   <figure class="personal-card-media" aria-hidden="true">
-                    <img src="@item.ImageSrc" alt="@personalImageAlt" loading="lazy" decoding="async" />
+                    <img src="@personalImageSrc" alt="@personalImageAlt" loading="lazy" decoding="async" />
                   </figure>
               }
               <div class="personal-card-copy">
@@ -392,13 +395,14 @@
           }
 
           <div class="social-list">
-            @foreach (var link in Model.Contact.Links)
+            @foreach (var entry in safeContactLinks)
             {
+                var isExternalLink = PublicUrlSanitizer.IsExternalHttpLink(entry.Href);
                 <a
-                  href="@link.Href"
-                  target="@(IsExternalLink(link.Href) ? "_blank" : null)"
-                  rel="@(IsExternalLink(link.Href) ? "noreferrer" : null)"
-                >@link.Label</a>
+                  href="@entry.Href"
+                  target="@(isExternalLink ? "_blank" : null)"
+                  rel="@(isExternalLink ? "noreferrer" : null)"
+                >@entry.Link.Label</a>
             }
           </div>
         </div>

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PortfolioSite.Models.Content;
 using PortfolioSite.Models.Identity;
 using PortfolioSite.Services;
+using PortfolioSite.Security;
 using PortfolioSite.ViewModels;
 
 namespace PortfolioSite.Controllers;
@@ -19,7 +20,6 @@ public sealed class AdminController : Controller
     [
         ".ico",
         ".png",
-        ".svg",
         ".webp",
         ".jpg",
         ".jpeg",
@@ -216,6 +216,8 @@ public sealed class AdminController : Controller
             ModelState.Remove($"Document.PersonalSection.Items[{itemIndex}].ImageSrc");
             ModelState.Remove($"Document.PersonalSection.Items[{itemIndex}].ImageAlt");
         }
+
+        ValidateAndSanitizeDocumentUrls(model.Document);
 
         ModelState.Remove(faviconSrcKey);
         ModelState.Remove(heroImageSrcKey);
@@ -533,7 +535,7 @@ public sealed class AdminController : Controller
             AllowedFaviconExtensions,
             MaxFaviconBytes,
             "アイコンサイズは 1 MB 以下にしてください。",
-            "対応形式は ICO / PNG / SVG / WEBP / JPG / GIF です。",
+            "対応形式は ICO / PNG / WEBP / JPG / GIF です。",
             cancellationToken
         );
     }
@@ -646,6 +648,67 @@ public sealed class AdminController : Controller
     private static string GetPersonalItemImageFieldName(int index)
     {
         return $"PersonalItemImageFile_{index}";
+    }
+
+    private void ValidateAndSanitizeDocumentUrls(PortfolioDocument document)
+    {
+        SanitizeDocumentField(
+            "Document.FaviconSrc",
+            document.FaviconSrc,
+            sanitized => document.FaviconSrc = sanitized,
+            PublicUrlSanitizer.SanitizeFaviconUrl,
+            "ファビコンURLは / で始まるサイト内パス、または http/https の ICO / PNG / WEBP / JPG / GIF を指定してください。"
+        );
+
+        SanitizeDocumentField(
+            "Document.Profile.HeroImageSrc",
+            document.Profile.HeroImageSrc,
+            sanitized => document.Profile.HeroImageSrc = sanitized,
+            PublicUrlSanitizer.SanitizeImageUrl,
+            "ヒーロー画像URLは / で始まるサイト内パス、または http/https の URL を指定してください。"
+        );
+
+        for (var itemIndex = 0; itemIndex < document.PersonalSection.Items.Count; itemIndex++)
+        {
+            var personalItem = document.PersonalSection.Items[itemIndex];
+            SanitizeDocumentField(
+                $"Document.PersonalSection.Items[{itemIndex}].ImageSrc",
+                personalItem.ImageSrc,
+                sanitized => personalItem.ImageSrc = sanitized,
+                PublicUrlSanitizer.SanitizeImageUrl,
+                "個人活動画像URLは / で始まるサイト内パス、または http/https の URL を指定してください。"
+            );
+        }
+
+        for (var linkIndex = 0; linkIndex < document.Contact.Links.Count; linkIndex++)
+        {
+            var link = document.Contact.Links[linkIndex];
+            SanitizeDocumentField(
+                $"Document.Contact.Links[{linkIndex}].Href",
+                link.Href,
+                sanitized => link.Href = sanitized,
+                PublicUrlSanitizer.SanitizeLinkUrl,
+                "リンクURLは / で始まるサイト内パス、または http/https / mailto / tel の URL を指定してください。"
+            );
+        }
+    }
+
+    private void SanitizeDocumentField(
+        string modelKey,
+        string? currentValue,
+        Action<string> assign,
+        Func<string?, string?> sanitizer,
+        string errorMessage
+    )
+    {
+        var sanitized = sanitizer(currentValue);
+        if (sanitized is null)
+        {
+            ModelState.AddModelError(modelKey, errorMessage);
+            return;
+        }
+
+        assign(sanitized);
     }
 
     private void SetLayoutViewData(PortfolioDocument document)
