@@ -10,6 +10,13 @@ public static class PortfolioDefaults
             SiteTitle = "Sample Taro | Cloud Infrastructure Engineer Portfolio",
             MetaDescription = "仮名とテストデータで構成した、インフラエンジニア向けポートフォリオの初期サンプル",
             FaviconSrc = "",
+            Adsense = new AdsenseContent
+            {
+                IsEnabled = false,
+                PublisherId = "",
+                HeadScript = "",
+                BodyScript = ""
+            },
             Profile = new ProfileContent
             {
                 Name = "Sample Taro",

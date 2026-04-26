@@ -24,11 +24,30 @@ builder.Services
         var loginId = options.LoginId?.Trim();
         var password = options.Password?.Trim();
 
-        options.LoginId = IsUnsetAdminSetting(loginId) ? "Admin" : loginId!;
-        options.Password = IsUnsetAdminSetting(password) ? "0000" : password!;
+        options.LoginId = IsUnsetSecretSetting(loginId) ? "Admin" : loginId!;
+        options.Password = IsUnsetSecretSetting(password) ? "0000" : password!;
     })
     .Validate(options => !string.IsNullOrWhiteSpace(options.LoginId), "AdminAccount:LoginId must not be empty.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "AdminAccount:Password must not be empty.")
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<GoogleAdsenseOptions>()
+    .Bind(builder.Configuration.GetSection("GoogleAdsense"))
+    .PostConfigure(options =>
+    {
+        options.ClientId = NormalizeOptionalSecret(options.ClientId);
+        options.ClientSecret = NormalizeOptionalSecret(options.ClientSecret);
+    })
+    .Validate(
+        options =>
+        {
+            var hasClientId = !string.IsNullOrWhiteSpace(options.ClientId);
+            var hasClientSecret = !string.IsNullOrWhiteSpace(options.ClientSecret);
+            return hasClientId == hasClientSecret;
+        },
+        "GoogleAdsense settings are invalid. Set both ClientId and ClientSecret, or leave both empty."
+    )
     .ValidateOnStart();
 
 builder.Services
@@ -106,8 +125,10 @@ builder.Services.AddControllersWithViews(options =>
 {
     options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true;
 });
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<PortfolioContentService>();
 builder.Services.AddScoped<PortfolioDbInitializer>();
+builder.Services.AddScoped<GoogleAdsenseService>();
 
 var app = builder.Build();
 app.Services.GetRequiredService<IOptions<ReverseProxyOptions>>()
@@ -131,13 +152,14 @@ app.Use(async (context, next) =>
         headers["Content-Security-Policy"] =
             "default-src 'self'; " +
             "base-uri 'self'; " +
-            "connect-src 'self'; " +
+            "connect-src 'self' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net; " +
             "font-src 'self' data: https://cdn.jsdelivr.net https://fonts.gstatic.com; " +
             "form-action 'self'; " +
             "frame-ancestors 'self'; " +
+            "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com; " +
             "img-src 'self' data: http: https:; " +
             "object-src 'none'; " +
-            "script-src 'self'; " +
+            "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; " +
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com";
         headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
@@ -175,8 +197,15 @@ app.MapControllerRoute(
 
 app.Run();
 
-static bool IsUnsetAdminSetting(string? value)
+static bool IsUnsetSecretSetting(string? value)
 {
     return string.IsNullOrWhiteSpace(value)
         || string.Equals(value, "__SET_BY_SECRETS_OR_ENV__", StringComparison.Ordinal);
+}
+
+static string NormalizeOptionalSecret(string? value)
+{
+    return IsUnsetSecretSetting(value)
+        ? string.Empty
+        : value!.Trim();
 }

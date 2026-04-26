@@ -36,12 +36,22 @@
         <strong>MySQL + EF Core</strong>
         <p>Controller と DbContext を通して保存します。</p>
       </article>
+	      <article class="portal-card">
+	        <span class="portal-card-label">公開サイト</span>
+	        <strong>@Model.SiteTitle</strong>
+	        <p>最終更新: @Model.UpdatedAtJst.ToString("yyyy-MM-dd HH:mm") JST</p>
+	      </article>
       <article class="portal-card">
-        <span class="portal-card-label">公開サイト</span>
-        <strong>@Model.SiteTitle</strong>
-        <p>最終更新: @Model.UpdatedAtJst.ToString("yyyy-MM-dd HH:mm") JST</p>
+        <span class="portal-card-label">AdSense</span>
+        <strong>レポート確認</strong>
+        <p>Google AdSense の接続状態と view 指標を管理画面から確認できます。</p>
       </article>
-    </div>
+      <article class="portal-card">
+        <span class="portal-card-label">Account</span>
+        <strong>ID / パスワード</strong>
+        <p>管理者ログイン情報を変更できます。</p>
+      </article>
+	    </div>
 
     <div class="portal-status-panel" aria-label="初期化ステータス">
       <div class="portal-status-item">
@@ -67,11 +77,13 @@
       </div>
     </div>
 
-    <div class="portal-actions">
-      <a class="button" asp-action="Edit">管理画面を開く</a>
-      <a class="button button-secondary" asp-controller="Home" asp-action="Index">サイトを見る</a>
-      <form asp-action="Logout" method="post" class="inline-form">
-        <button class="button button-ghost" type="submit">ログアウト</button>
+	    <div class="portal-actions">
+	      <a class="button" asp-action="Edit">管理画面を開く</a>
+	      <a class="button button-secondary" asp-action="Adsense">AdSense を見る</a>
+	      <a class="button button-secondary" asp-action="Account">アカウント設定</a>
+	      <a class="button button-secondary" asp-controller="Home" asp-action="Index">サイトを見る</a>
+	      <form asp-action="Logout" method="post" class="inline-form">
+	        <button class="button button-ghost" type="submit">ログアウト</button>
       </form>
     </div>
   </section>

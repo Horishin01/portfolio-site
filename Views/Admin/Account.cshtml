@@ -1,0 +1,151 @@
+@model AdminAccountViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "管理者アカウント";
+
+    var tone = ViewData["StatusTone"] as string ?? TempData["StatusTone"] as string;
+    var tempMessage = ViewData["StatusMessage"] as string ?? TempData["StatusMessage"] as string;
+    var hasErrors = !ViewData.ModelState.IsValid;
+    var validationMessage = ValidationMessageLocalizer.GetFirstError(ViewData.ModelState);
+    var statusMessage = validationMessage ?? tempMessage ?? "ログインIDとパスワードを変更できます。";
+    var statusClass = hasErrors
+        ? "is-error"
+        : tone is "success" ? "is-success"
+        : tone is "warning" ? "is-warning"
+        : string.Empty;
+}
+<div class="portal-transition-shell is-visible">
+  <section class="portal-transition-screen">
+    <div class="portal-topline">
+      <div class="portal-hero">
+        <p class="admin-eyebrow">Account</p>
+        <h1>管理者アカウント</h1>
+        <p class="admin-note">
+          現在のパスワードで本人確認してから、ログインIDまたはパスワードを更新します。
+        </p>
+      </div>
+
+      <aside class="portal-command-card">
+        <span class="portal-card-label">現在のログインID</span>
+        <strong>@Model.CurrentLoginId</strong>
+        <p>変更後は新しいIDでログインしてください。</p>
+      </aside>
+    </div>
+
+    <p class="status-message @statusClass">@statusMessage</p>
+    <div asp-validation-summary="ModelOnly" class="status-message is-error"></div>
+
+    <div class="account-settings-grid">
+      <article class="account-settings-card">
+        <div class="account-settings-header">
+          <span class="portal-card-label">Login ID</span>
+          <h2>IDを変更</h2>
+          <p>次回ログインから新しいIDを使用します。</p>
+        </div>
+
+        <form asp-action="ChangeLoginId" method="post" class="account-settings-form">
+          <div class="field">
+            <label asp-for="LoginIdForm.NewLoginId"></label>
+            <input asp-for="LoginIdForm.NewLoginId" autocomplete="username" />
+            <span asp-validation-for="LoginIdForm.NewLoginId" class="field-validation-error"></span>
+          </div>
+
+          <div class="field">
+            <label asp-for="LoginIdForm.CurrentPassword"></label>
+            <div class="password-input-shell">
+              <input asp-for="LoginIdForm.CurrentPassword" id="LoginIdCurrentPassword" autocomplete="current-password" />
+              <button
+                class="password-visibility-button"
+                type="button"
+                data-password-toggle
+                data-password-target="LoginIdCurrentPassword"
+                aria-label="パスワードを表示"
+                aria-pressed="false"
+                title="パスワードを表示・非表示"
+              >
+                <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+              </button>
+            </div>
+            <span asp-validation-for="LoginIdForm.CurrentPassword" class="field-validation-error"></span>
+          </div>
+
+          <button class="button" type="submit">IDを変更</button>
+        </form>
+      </article>
+
+      <article class="account-settings-card">
+        <div class="account-settings-header">
+          <span class="portal-card-label">Password</span>
+          <h2>パスワードを変更</h2>
+          <p>12文字以上で、英大文字・英小文字・数字・記号を含めてください。</p>
+        </div>
+
+        <form asp-action="ChangePassword" method="post" class="account-settings-form">
+          <div class="field">
+            <label asp-for="PasswordForm.CurrentPassword"></label>
+            <div class="password-input-shell">
+              <input asp-for="PasswordForm.CurrentPassword" id="PasswordCurrentPassword" autocomplete="current-password" />
+              <button
+                class="password-visibility-button"
+                type="button"
+                data-password-toggle
+                data-password-target="PasswordCurrentPassword"
+                aria-label="パスワードを表示"
+                aria-pressed="false"
+                title="パスワードを表示・非表示"
+              >
+                <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+              </button>
+            </div>
+            <span asp-validation-for="PasswordForm.CurrentPassword" class="field-validation-error"></span>
+          </div>
+
+          <div class="field">
+            <label asp-for="PasswordForm.NewPassword"></label>
+            <div class="password-input-shell">
+              <input asp-for="PasswordForm.NewPassword" id="NewPassword" autocomplete="new-password" />
+              <button
+                class="password-visibility-button"
+                type="button"
+                data-password-toggle
+                data-password-target="NewPassword"
+                aria-label="パスワードを表示"
+                aria-pressed="false"
+                title="パスワードを表示・非表示"
+              >
+                <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+              </button>
+            </div>
+            <span asp-validation-for="PasswordForm.NewPassword" class="field-validation-error"></span>
+          </div>
+
+          <div class="field">
+            <label asp-for="PasswordForm.ConfirmPassword"></label>
+            <div class="password-input-shell">
+              <input asp-for="PasswordForm.ConfirmPassword" id="ConfirmPassword" autocomplete="new-password" />
+              <button
+                class="password-visibility-button"
+                type="button"
+                data-password-toggle
+                data-password-target="ConfirmPassword"
+                aria-label="パスワードを表示"
+                aria-pressed="false"
+                title="パスワードを表示・非表示"
+              >
+                <i class="fa-regular fa-eye-slash" aria-hidden="true"></i>
+              </button>
+            </div>
+            <span asp-validation-for="PasswordForm.ConfirmPassword" class="field-validation-error"></span>
+          </div>
+
+          <button class="button" type="submit">パスワードを変更</button>
+        </form>
+      </article>
+    </div>
+
+    <div class="portal-actions">
+      <a class="button button-ghost" asp-action="Index">ポータルへ戻る</a>
+      <a class="button button-secondary" asp-action="Edit">編集画面へ</a>
+    </div>
+  </section>
+</div>

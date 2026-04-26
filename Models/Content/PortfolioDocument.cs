@@ -16,6 +16,9 @@ public sealed class PortfolioDocument
     [Display(Name = "ファビコンURL")]
     public string FaviconSrc { get; set; } = "";
 
+    [Display(Name = "AdSense 設定")]
+    public AdsenseContent Adsense { get; set; } = new();
+
     [Display(Name = "プロフィール")]
     public ProfileContent Profile { get; set; } = new();
 
@@ -72,6 +75,21 @@ public sealed class ProfileContent
 
     [Display(Name = "ハイライト")]
     public List<LabeledValueItem> Highlights { get; set; } = [];
+}
+
+public sealed class AdsenseContent
+{
+    [Display(Name = "公開ページで AdSense を有効にする")]
+    public bool IsEnabled { get; set; }
+
+    [Display(Name = "Publisher ID")]
+    public string PublisherId { get; set; } = "";
+
+    [Display(Name = "head 追加コード")]
+    public string HeadScript { get; set; } = "";
+
+    [Display(Name = "body 末尾追加コード")]
+    public string BodyScript { get; set; } = "";
 }
 
 public sealed class ProfileSectionContent

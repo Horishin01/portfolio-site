@@ -19,6 +19,7 @@ public sealed class HomeController : Controller
     {
         var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
         ViewData["FaviconHref"] = snapshot.Document.FaviconSrc;
+        SetAdsenseViewData(snapshot.Document);
         return View(snapshot.Document);
     }
 
@@ -48,6 +49,7 @@ public sealed class HomeController : Controller
         }
 
         ViewData["FaviconHref"] = document.FaviconSrc;
+        SetAdsenseViewData(document);
 
         var model = new PersonalItemDetailViewModel
         {
@@ -75,5 +77,12 @@ public sealed class HomeController : Controller
     public IActionResult Error()
     {
         return View();
+    }
+
+    private void SetAdsenseViewData(PortfolioDocument document)
+    {
+        ViewData["AdsenseEnabled"] = document.Adsense.IsEnabled;
+        ViewData["AdsenseHeadScript"] = document.Adsense.HeadScript;
+        ViewData["AdsenseBodyScript"] = document.Adsense.BodyScript;
     }
 }

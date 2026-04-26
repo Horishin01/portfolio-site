@@ -28,6 +28,9 @@ Prompted values:
     Optional comma-separated IPs for trusted reverse proxies
   ReverseProxy__KnownNetworks
     Optional comma-separated CIDR blocks for trusted reverse proxy networks
+  Configure Google AdSense OAuth client?
+    yes: prompt for GoogleAdsense__ClientId and GoogleAdsense__ClientSecret
+    no: omit AdSense integration settings
 
 Enter raw values without surrounding quotes.
 
@@ -147,6 +150,8 @@ admin_login_id="${PORTFOLIO_ADMIN_LOGIN_ID:-}"
 admin_password="${PORTFOLIO_ADMIN_PASSWORD:-}"
 known_proxies="${PORTFOLIO_KNOWN_PROXIES:-}"
 known_networks="${PORTFOLIO_KNOWN_NETWORKS:-}"
+adsense_client_id="${PORTFOLIO_GOOGLE_ADSENSE_CLIENT_ID:-}"
+adsense_client_secret="${PORTFOLIO_GOOGLE_ADSENSE_CLIENT_SECRET:-}"
 
 if [[ -z "$aspnetcore_environment" ]]; then
   aspnetcore_environment="$(prompt_with_default "ASPNETCORE_ENVIRONMENT" "Production")"
@@ -187,6 +192,22 @@ if [[ -z "$known_networks" ]]; then
   known_networks="$(prompt_with_default "ReverseProxy__KnownNetworks" "")"
 fi
 
+if [[ -z "$adsense_client_id" && -z "$adsense_client_secret" ]]; then
+  configure_adsense_client="$(prompt_yes_no "Configure Google AdSense OAuth client? (yes/no)" "no")"
+  if [[ "$configure_adsense_client" == "yes" ]]; then
+    adsense_client_id="$(prompt_required "GoogleAdsense__ClientId")"
+    adsense_client_secret="$(prompt_secret_required "GoogleAdsense__ClientSecret")"
+  fi
+else
+  if [[ -z "$adsense_client_id" && -n "$adsense_client_secret" ]]; then
+    adsense_client_id="$(prompt_required "GoogleAdsense__ClientId")"
+  fi
+
+  if [[ -n "$adsense_client_id" && -z "$adsense_client_secret" ]]; then
+    adsense_client_secret="$(prompt_secret_required "GoogleAdsense__ClientSecret")"
+  fi
+fi
+
 mkdir -p "$(dirname "$output_path")"
 
 {
@@ -203,6 +224,10 @@ mkdir -p "$(dirname "$output_path")"
   fi
   if [[ -n "$known_networks" ]]; then
     write_entry "ReverseProxy__KnownNetworks" "$known_networks"
+  fi
+  if [[ -n "$adsense_client_id" && -n "$adsense_client_secret" ]]; then
+    write_entry "GoogleAdsense__ClientId" "$adsense_client_id"
+    write_entry "GoogleAdsense__ClientSecret" "$adsense_client_secret"
   fi
 } > "$output_path"
 

@@ -18,6 +18,7 @@ public sealed class PortfolioDbContext : IdentityDbContext<AdminUser>
     public DbSet<PortfolioWorkItemRecord> WorkItems => Set<PortfolioWorkItemRecord>();
     public DbSet<PortfolioPersonalItemRecord> PersonalItems => Set<PortfolioPersonalItemRecord>();
     public DbSet<PortfolioContactLinkRecord> ContactLinks => Set<PortfolioContactLinkRecord>();
+    public DbSet<AdminAdsenseConnectionRecord> AdminAdsenseConnections => Set<AdminAdsenseConnectionRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +33,10 @@ public sealed class PortfolioDbContext : IdentityDbContext<AdminUser>
             entity.Property(x => x.SiteTitle).IsRequired();
             entity.Property(x => x.MetaDescription).IsRequired();
             entity.Property(x => x.FaviconSrc).IsRequired();
+            entity.Property(x => x.AdsenseIsEnabled).IsRequired();
+            entity.Property(x => x.AdsensePublisherId).IsRequired();
+            entity.Property(x => x.AdsenseHeadScript).IsRequired();
+            entity.Property(x => x.AdsenseBodyScript).IsRequired();
             entity.Property(x => x.ProfileName).IsRequired();
             entity.Property(x => x.ProfileShortName).IsRequired();
             entity.Property(x => x.ProfileRole).IsRequired();
@@ -61,6 +66,18 @@ public sealed class PortfolioDbContext : IdentityDbContext<AdminUser>
             entity.Property(x => x.ContactNote).IsRequired();
             entity.Property(x => x.ContactEmail).IsRequired();
             entity.Property(x => x.FooterRole).IsRequired();
+            entity.Property(x => x.UpdatedAtUtc).IsRequired();
+        });
+
+        modelBuilder.Entity<AdminAdsenseConnectionRecord>(entity =>
+        {
+            entity.ToTable("admin_adsense_connections");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.Property(x => x.AccountName).IsRequired();
+            entity.Property(x => x.AccountDisplayName).IsRequired();
+            entity.Property(x => x.RefreshTokenCiphertext).IsRequired();
+            entity.Property(x => x.ConnectedAtUtc).IsRequired();
             entity.Property(x => x.UpdatedAtUtc).IsRequired();
         });
 

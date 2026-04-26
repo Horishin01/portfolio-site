@@ -1,0 +1,272 @@
+@model AdminAdsenseViewModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Google AdSense レポート";
+
+    var tone = TempData["StatusTone"] as string;
+    var tempMessage = TempData["StatusMessage"] as string;
+    var statusMessage = Model.ErrorMessage ?? tempMessage ?? "Google AdSense の接続状態と直近の view 指標を確認できます。";
+    var statusClass = Model.ErrorMessage is not null
+        ? "is-error"
+        : tone is "success" ? "is-success"
+        : tone is "warning" ? "is-warning"
+        : string.Empty;
+    var currencyCode = string.IsNullOrWhiteSpace(Model.CurrencyCode) ? "アカウント通貨" : Model.CurrencyCode;
+    var publishStatus = Model.AdsenseIsEnabled ? "公開中" : "停止中";
+    var suggestedHeadScript = Model.BuildSuggestedHeadScript();
+}
+<div class="portal-transition-shell is-visible">
+  <section class="portal-transition-screen">
+    <div class="portal-topline">
+      <div class="portal-hero">
+        <p class="admin-eyebrow">Insights</p>
+        <h1>Google AdSense</h1>
+        <p class="admin-note">
+          管理画面から OAuth 接続し、直近 30 日のページビュー、収益、サイト別の状況を確認できます。
+        </p>
+      </div>
+
+      <aside class="portal-command-card">
+        <span class="portal-card-label">接続状態</span>
+        <strong>@(Model.IsConnected ? "Connected" : Model.IsConfigured ? "Ready to connect" : "Not configured")</strong>
+        <p>
+          @(Model.IsConnected
+              ? "Google の read-only scope で接続しています。"
+              : Model.IsConfigured
+                  ? "OAuth クライアント設定は読み込まれています。"
+                  : "OAuth クライアント設定が未入力です。")
+        </p>
+        <div class="editor-chip-row">
+          <span class="editor-chip">Redirect URI 固定</span>
+          @if (Model.ConnectedAtJst is DateTime connectedAtJst)
+          {
+            <span class="editor-chip">接続日時 @connectedAtJst.ToString("MM-dd HH:mm") JST</span>
+          }
+        </div>
+      </aside>
+    </div>
+
+    <p class="status-message @statusClass">@statusMessage</p>
+    <div asp-validation-summary="ModelOnly" class="status-message is-error"></div>
+
+    <div class="portal-overview-grid">
+      <article class="portal-card">
+        <span class="portal-card-label">OAuth クライアント</span>
+        <strong>@(Model.IsConfigured ? "Configured" : "Missing")</strong>
+        <p><code>GoogleAdsense__ClientId</code> と <code>GoogleAdsense__ClientSecret</code> の両方が必要です。</p>
+      </article>
+      <article class="portal-card">
+        <span class="portal-card-label">アカウント</span>
+        <strong>@(Model.AccountDisplayName ?? "未接続")</strong>
+        <p>@(Model.AccountName ?? "Google AdSense 接続後に自動取得します。")</p>
+      </article>
+      <article class="portal-card">
+        <span class="portal-card-label">30日 PV</span>
+        <strong>@(Model.PageViews30Days?.ToString("N0") ?? "0")</strong>
+        <p>Google AdSense の <code>PAGE_VIEWS</code> を表示します。</p>
+      </article>
+      <article class="portal-card">
+        <span class="portal-card-label">30日 収益</span>
+        <strong>@(Model.EstimatedEarnings30Days?.ToString("N2") ?? "0.00")</strong>
+        <p>@currencyCode の <code>ESTIMATED_EARNINGS</code> を表示します。</p>
+      </article>
+    </div>
+
+    <div class="portal-overview-grid">
+      <article class="portal-card">
+        <span class="portal-card-label">Callback URL</span>
+        <strong class="metric-code">@Model.RedirectUri</strong>
+        <p>Google Cloud Console の OAuth redirect URI にこの URL を登録してください。</p>
+      </article>
+      <article class="portal-card">
+        <span class="portal-card-label">セキュリティ</span>
+        <strong>Read-only + encrypted</strong>
+        <p>Refresh token は暗号化して保存し、管理画面では再表示しません。</p>
+      </article>
+      <article class="portal-card">
+        <span class="portal-card-label">広告コード</span>
+        <strong>@publishStatus</strong>
+        <p>@(Model.HasPublishCode ? "公開ページへ挿入する追加コードが保存されています。" : "追加コードはまだ保存されていません。")</p>
+      </article>
+    </div>
+
+    <section class="adsense-code-panel" aria-label="AdSense publish code">
+      <div class="adsense-code-header">
+        <div>
+          <span class="portal-card-label">Publish code</span>
+          <h2>AdSense 追加コード</h2>
+          <p>
+            Google AdSense の審査用コード、Auto ads、広告ユニット用 JS を保存できます。
+            有効化すると公開ページの head または body 末尾へそのまま出力します。
+          </p>
+        </div>
+        <span class="adsense-state-badge @(Model.AdsenseIsEnabled ? "is-live" : string.Empty)">@publishStatus</span>
+      </div>
+
+      <form asp-action="AdsenseCode" method="post" class="adsense-code-form">
+        <div class="field-grid">
+          <div class="field">
+            <label asp-for="AdsensePublisherId"></label>
+            <input asp-for="AdsensePublisherId" placeholder="ca-pub-0000000000000000" />
+            <p class="field-help">入力すると、下のサンプルコードの client 値を確認しやすくなります。</p>
+          </div>
+          <div class="field adsense-toggle-field">
+            <label class="adsense-toggle">
+              <input asp-for="AdsenseIsEnabled" />
+              <span>
+                <strong>公開ページに出力する</strong>
+                <small>保存済みコードをトップページと個別ページで有効にします。</small>
+              </span>
+            </label>
+          </div>
+          <div class="field field-full">
+            <label asp-for="AdsenseHeadScript"></label>
+            <textarea asp-for="AdsenseHeadScript" class="adsense-code-textarea" spellcheck="false" placeholder="@suggestedHeadScript"></textarea>
+            <span asp-validation-for="AdsenseHeadScript" class="field-validation-error"></span>
+            <p class="field-help">Google が案内する <code>&lt;script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"...&gt;&lt;/script&gt;</code> は通常ここに貼ります。</p>
+          </div>
+          <div class="field field-full">
+            <label asp-for="AdsenseBodyScript"></label>
+            <textarea asp-for="AdsenseBodyScript" class="adsense-code-textarea" spellcheck="false"></textarea>
+            <p class="field-help">特定位置ではなく body 末尾へ置きたい追加 JS がある場合だけ使います。空欄でも保存できます。</p>
+          </div>
+        </div>
+
+        <div class="adsense-code-preview">
+          <span class="portal-card-label">loader sample</span>
+          <code>@suggestedHeadScript</code>
+        </div>
+
+        <div class="portal-actions">
+          <button class="button" type="submit">追加コードを保存</button>
+          <a class="button button-ghost" asp-controller="Home" asp-action="Index" target="_blank" rel="noreferrer">公開ページを確認</a>
+        </div>
+      </form>
+    </section>
+
+    <div class="portal-actions">
+      @if (Model.IsConfigured)
+      {
+        <form asp-action="AdsenseConnect" method="post" class="inline-form">
+          <button class="button" type="submit">@(Model.IsConnected ? "再接続する" : "Google と接続する")</button>
+        </form>
+      }
+      <a class="button button-ghost" asp-action="Index">ポータルへ戻る</a>
+      <a class="button button-secondary" asp-action="Edit">編集画面へ</a>
+      @if (Model.IsConnected)
+      {
+        <form asp-action="AdsenseDisconnect" method="post" class="inline-form" data-confirm="Google AdSense 接続を解除します。保存済み token も削除されます。">
+          <button class="button button-ghost" type="submit">接続を解除する</button>
+        </form>
+      }
+    </div>
+
+    @if (!Model.IsConfigured)
+    {
+      <section class="portal-status-panel" aria-label="AdSense configuration">
+        <div class="portal-status-item">
+          <span class="portal-status-dot"></span>
+          <div>
+            <strong>必要な設定</strong>
+            <p><code>GoogleAdsense__ClientId</code> と <code>GoogleAdsense__ClientSecret</code> を env または user-secrets に設定してください。</p>
+          </div>
+        </div>
+        <div class="portal-status-item">
+          <span class="portal-status-dot"></span>
+          <div>
+            <strong>Google Cloud Console</strong>
+            <p>OAuth クライアントにはこのページ上の redirect URI を登録し、AdSense API を有効化してください。</p>
+          </div>
+        </div>
+      </section>
+    }
+    else if (Model.IsConnected && Model.HasMetrics)
+    {
+      <div class="portal-overview-grid">
+        <article class="portal-card metric-card">
+          <span class="portal-card-label">30日 Impression</span>
+          <strong>@Model.Impressions30Days?.ToString("N0")</strong>
+          <p><code>IMPRESSIONS</code> の合計です。</p>
+        </article>
+        <article class="portal-card metric-card">
+          <span class="portal-card-label">30日 Click</span>
+          <strong>@Model.Clicks30Days?.ToString("N0")</strong>
+          <p><code>CLICKS</code> の合計です。</p>
+        </article>
+        <article class="portal-card metric-card">
+          <span class="portal-card-label">Page RPM</span>
+          <strong>@Model.PageViewsRpm30Days?.ToString("N2")</strong>
+          <p><code>PAGE_VIEWS_RPM</code> を表示します。</p>
+        </article>
+      </div>
+
+      <div class="adsense-grid">
+        <article class="portal-card">
+          <span class="portal-card-label">日別ビュー</span>
+          <div class="adsense-table-wrap">
+            <table class="adsense-table">
+              <thead>
+                <tr>
+                  <th>日付</th>
+                  <th>Page Views</th>
+                  <th>Clicks</th>
+                  <th>Earnings (@currencyCode)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var item in Model.DailyMetrics)
+                {
+                  <tr>
+                    <td>@item.DateLabel</td>
+                    <td>@item.PageViews.ToString("N0")</td>
+                    <td>@item.Clicks.ToString("N0")</td>
+                    <td>@item.EstimatedEarnings.ToString("N2")</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="portal-card">
+          <span class="portal-card-label">上位サイト</span>
+          <div class="adsense-table-wrap">
+            <table class="adsense-table">
+              <thead>
+                <tr>
+                  <th>ドメイン</th>
+                  <th>Page Views</th>
+                  <th>Clicks</th>
+                  <th>Earnings (@currencyCode)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach (var item in Model.TopSites)
+                {
+                  <tr>
+                    <td>@item.Domain</td>
+                    <td>@item.PageViews.ToString("N0")</td>
+                    <td>@item.Clicks.ToString("N0")</td>
+                    <td>@item.EstimatedEarnings.ToString("N2")</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </div>
+    }
+    else if (Model.IsConnected && Model.ErrorMessage is null)
+    {
+      <section class="portal-status-panel" aria-label="AdSense report status">
+        <div class="portal-status-item">
+          <span class="portal-status-dot"></span>
+          <div>
+            <strong>レポート待機中</strong>
+            <p>接続は完了していますが、まだ表示できる AdSense 指標がありません。時間をおいて再読み込みしてください。</p>
+          </div>
+        </div>
+      </section>
+    }
+  </section>
+</div>

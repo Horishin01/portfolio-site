@@ -1,4 +1,113 @@
 (() => {
+  const editorScrollKey = "portfolio-admin-edit-scroll";
+  const restoreEditorScrollPosition = () => {
+    const editorShell = document.getElementById("adminShell");
+    if (!document.body.contains(document.getElementById("editorForm"))) {
+      return;
+    }
+
+    const rawValue = editorShell?.getAttribute("data-restore-scroll-y") || sessionStorage.getItem(editorScrollKey);
+    if (!rawValue) {
+      return;
+    }
+
+    sessionStorage.removeItem(editorScrollKey);
+
+    const saved = Number.parseInt(rawValue, 10);
+    if (!Number.isFinite(saved) || saved < 0) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: saved,
+        behavior: "auto"
+      });
+    });
+  };
+
+  restoreEditorScrollPosition();
+
+  const bindSectionNavigationState = () => {
+    const navLinks = Array.from(document.querySelectorAll(".section-nav-link"));
+    if (navLinks.length === 0) {
+      return;
+    }
+
+    const sectionEntries = navLinks
+      .map((link) => {
+        const href = link.getAttribute("href");
+        if (!href || !href.startsWith("#")) {
+          return null;
+        }
+
+        const section = document.getElementById(href.slice(1));
+        return section instanceof HTMLElement ? { link, section } : null;
+      })
+      .filter(Boolean);
+
+    if (sectionEntries.length === 0) {
+      return;
+    }
+
+    const activate = (activeSectionId) => {
+      sectionEntries.forEach(({ link, section }) => {
+        const isActive = section.id === activeSectionId;
+        link.classList.toggle("is-active", isActive);
+        if (isActive) {
+          link.setAttribute("aria-current", "true");
+          return;
+        }
+
+        link.removeAttribute("aria-current");
+      });
+    };
+
+    const getCurrentSectionId = () => {
+      const markerY = Math.max(120, window.innerHeight * 0.28);
+      let current = sectionEntries[0].section.id;
+
+      sectionEntries.forEach(({ section }) => {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= markerY) {
+          current = section.id;
+        }
+      });
+
+      return current;
+    };
+
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      activate(getCurrentSectionId());
+    };
+
+    const requestUpdate = () => {
+      if (ticking) {
+        return;
+      }
+
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+
+    navLinks.forEach((link) => {
+      link.addEventListener("click", () => {
+        const href = link.getAttribute("href");
+        if (href?.startsWith("#")) {
+          activate(href.slice(1));
+        }
+      });
+    });
+
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+    update();
+  };
+
+  bindSectionNavigationState();
+
   const bindImagePreview = ({ cardId, mediaId, fileInputId, srcInputId, altInputId, defaultAlt }) => {
     const card = document.getElementById(cardId);
     const media = document.getElementById(mediaId);
@@ -142,6 +251,11 @@
       });
 
       target.value = selected.join("\n");
+
+      const summary = document.querySelector(`[data-selection-summary-for="${targetId}"]`);
+      if (summary) {
+        summary.textContent = String(selected.length);
+      }
     };
 
     group.addEventListener("change", (event) => {
@@ -156,8 +270,22 @@
 
   const editorForm = document.getElementById("editorForm");
   if (editorForm instanceof HTMLFormElement) {
-    editorForm.addEventListener("submit", () => {
+    editorForm.addEventListener("submit", (event) => {
       selectionSyncers.forEach((sync) => sync());
+      const scrollInput = document.getElementById("editorScrollY");
+      if (scrollInput instanceof HTMLInputElement) {
+        scrollInput.value = String(window.scrollY);
+      }
+
+      const submitter = event.submitter instanceof HTMLElement
+        ? event.submitter
+        : document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+
+      if (submitter?.getAttribute("name") === "editorAction") {
+        sessionStorage.setItem(editorScrollKey, String(window.scrollY));
+      }
     });
   }
 

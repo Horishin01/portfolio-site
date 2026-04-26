@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Cryptography;
+using System.Text;
 using PortfolioSite.Models.Content;
 using PortfolioSite.Models.Identity;
 using PortfolioSite.Services;
@@ -13,6 +15,7 @@ namespace PortfolioSite.Controllers;
 [Route("admin")]
 public sealed class AdminController : Controller
 {
+    private const string AdsenseOAuthStateCookieName = "portfolio_adsense_oauth_state";
     private const string FaviconDirectory = "uploads/favicons";
     private const string HeroImageDirectory = "uploads/hero-images";
     private const string PersonalItemImageDirectory = "uploads/personal-items";
@@ -37,19 +40,25 @@ public sealed class AdminController : Controller
     private const long MaxHeroImageBytes = 5 * 1024 * 1024;
     private const long MaxPersonalItemImageBytes = 5 * 1024 * 1024;
 
+    private readonly GoogleAdsenseService _adsenseService;
     private readonly PortfolioContentService _contentService;
     private readonly IWebHostEnvironment _environment;
     private readonly SignInManager<AdminUser> _signInManager;
+    private readonly UserManager<AdminUser> _userManager;
 
     public AdminController(
+        GoogleAdsenseService adsenseService,
         PortfolioContentService contentService,
         IWebHostEnvironment environment,
-        SignInManager<AdminUser> signInManager
+        SignInManager<AdminUser> signInManager,
+        UserManager<AdminUser> userManager
     )
     {
+        _adsenseService = adsenseService;
         _contentService = contentService;
         _environment = environment;
         _signInManager = signInManager;
+        _userManager = userManager;
     }
 
     [AllowAnonymous]
@@ -130,11 +139,263 @@ public sealed class AdminController : Controller
     }
 
     [Authorize]
+    [HttpGet("account")]
+    public async Task<IActionResult> Account(CancellationToken cancellationToken)
+    {
+        var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
+        SetLayoutViewData(snapshot.Document);
+
+        return View(new AdminAccountViewModel
+        {
+            CurrentLoginId = User.Identity?.Name ?? "",
+            LoginIdForm = new AdminChangeLoginIdViewModel
+            {
+                NewLoginId = User.Identity?.Name ?? ""
+            }
+        });
+    }
+
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [HttpPost("account/login-id")]
+    public async Task<IActionResult> ChangeLoginId(
+        [Bind(Prefix = "LoginIdForm")] AdminChangeLoginIdViewModel model,
+        CancellationToken cancellationToken
+    )
+    {
+        var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
+        SetLayoutViewData(snapshot.Document);
+
+        if (!ModelState.IsValid)
+        {
+            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+        }
+
+        var user = await GetCurrentAdminUserAsync();
+        if (user is null)
+        {
+            return Challenge();
+        }
+
+        if (!await _userManager.CheckPasswordAsync(user, model.CurrentPassword))
+        {
+            ModelState.AddModelError("LoginIdForm.CurrentPassword", "現在のパスワードが違います。");
+            model.CurrentPassword = "";
+            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+        }
+
+        var newLoginId = model.NewLoginId.Trim();
+        var existingUser = await _userManager.FindByNameAsync(newLoginId);
+        if (existingUser is not null && !string.Equals(existingUser.Id, user.Id, StringComparison.Ordinal))
+        {
+            ModelState.AddModelError("LoginIdForm.NewLoginId", "このIDはすでに使用されています。");
+            model.CurrentPassword = "";
+            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+        }
+
+        var setNameResult = await _userManager.SetUserNameAsync(user, newLoginId);
+        if (!setNameResult.Succeeded)
+        {
+            AddIdentityErrors(setNameResult);
+            model.CurrentPassword = "";
+            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+        }
+
+        await _signInManager.RefreshSignInAsync(user);
+        TempData["StatusMessage"] = "ログインIDを変更しました。";
+        TempData["StatusTone"] = "success";
+        return RedirectToAction(nameof(Account));
+    }
+
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [HttpPost("account/password")]
+    public async Task<IActionResult> ChangePassword(
+        [Bind(Prefix = "PasswordForm")] AdminChangePasswordViewModel model,
+        CancellationToken cancellationToken
+    )
+    {
+        var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
+        SetLayoutViewData(snapshot.Document);
+
+        if (!ModelState.IsValid)
+        {
+            return View(nameof(Account), BuildAccountViewModel(passwordForm: model));
+        }
+
+        var user = await GetCurrentAdminUserAsync();
+        if (user is null)
+        {
+            return Challenge();
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+        if (!result.Succeeded)
+        {
+            AddIdentityErrors(result);
+            model.CurrentPassword = "";
+            model.NewPassword = "";
+            model.ConfirmPassword = "";
+            return View(nameof(Account), BuildAccountViewModel(passwordForm: model));
+        }
+
+        await _signInManager.RefreshSignInAsync(user);
+        TempData["StatusMessage"] = "パスワードを変更しました。";
+        TempData["StatusTone"] = "success";
+        return RedirectToAction(nameof(Account));
+    }
+
+    [Authorize]
+    [HttpGet("adsense")]
+    public async Task<IActionResult> Adsense(CancellationToken cancellationToken)
+    {
+        var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
+        var dashboard = await _adsenseService.GetDashboardAsync(cancellationToken);
+        var model = AdminAdsenseViewModel.FromSnapshot(dashboard, snapshot.Document.Adsense, BuildAdsenseRedirectUri());
+        SetLayoutViewData(snapshot.Document);
+        return View(model);
+    }
+
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [HttpPost("adsense/code")]
+    public async Task<IActionResult> AdsenseCode(AdminAdsenseViewModel model, CancellationToken cancellationToken)
+    {
+        var adsense = model.ToAdsenseContent();
+        if (adsense.IsEnabled
+            && string.IsNullOrWhiteSpace(adsense.HeadScript)
+            && string.IsNullOrWhiteSpace(adsense.BodyScript))
+        {
+            ModelState.AddModelError(
+                nameof(AdminAdsenseViewModel.AdsenseHeadScript),
+                "AdSense を有効にする場合は、head または body 末尾の追加コードを入力してください。"
+            );
+        }
+
+        if (!ModelState.IsValid)
+        {
+            var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
+            var dashboard = await _adsenseService.GetDashboardAsync(cancellationToken);
+            var viewModel = AdminAdsenseViewModel.FromSnapshot(dashboard, adsense, BuildAdsenseRedirectUri());
+            SetLayoutViewData(snapshot.Document);
+            return View(nameof(Adsense), viewModel);
+        }
+
+        var updatedSnapshot = await _contentService.SaveAdsenseSettingsAsync(adsense, cancellationToken);
+        SetLayoutViewData(updatedSnapshot.Document);
+        TempData["StatusMessage"] = adsense.IsEnabled
+            ? "AdSense 追加コードを保存し、公開ページへの出力を有効にしました。"
+            : "AdSense 追加コードを保存しました。公開ページへの出力は無効です。";
+        TempData["StatusTone"] = "success";
+        return RedirectToAction(nameof(Adsense));
+    }
+
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [HttpPost("adsense/connect")]
+    public IActionResult AdsenseConnect()
+    {
+        if (!_adsenseService.IsConfigured)
+        {
+            TempData["StatusMessage"] = "Google AdSense OAuth クライアントが未設定です。env または user-secrets を設定してください。";
+            TempData["StatusTone"] = "warning";
+            return RedirectToAction(nameof(Adsense));
+        }
+
+        var state = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+        Response.Cookies.Append(
+            AdsenseOAuthStateCookieName,
+            state,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                IsEssential = true,
+                MaxAge = TimeSpan.FromMinutes(10),
+                Path = Url.Action(nameof(AdsenseCallback)) ?? "/admin/adsense/callback",
+                SameSite = SameSiteMode.Lax,
+                Secure = Request.IsHttps
+            }
+        );
+
+        return Redirect(_adsenseService.BuildAuthorizationUrl(BuildAdsenseRedirectUri(), state));
+    }
+
+    [Authorize]
+    [HttpGet("adsense/callback")]
+    public async Task<IActionResult> AdsenseCallback(
+        string? code,
+        string? state,
+        string? error,
+        CancellationToken cancellationToken
+    )
+    {
+        var expectedState = Request.Cookies[AdsenseOAuthStateCookieName];
+        Response.Cookies.Delete(
+            AdsenseOAuthStateCookieName,
+            new CookieOptions
+            {
+                Path = Url.Action(nameof(AdsenseCallback)) ?? "/admin/adsense/callback",
+                SameSite = SameSiteMode.Lax,
+                Secure = Request.IsHttps
+            }
+        );
+
+        if (!AdsenseOAuthStateMatches(expectedState, state))
+        {
+            TempData["StatusMessage"] = "Google OAuth の state 検証に失敗しました。再度接続してください。";
+            TempData["StatusTone"] = "error";
+            return RedirectToAction(nameof(Adsense));
+        }
+
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            TempData["StatusMessage"] = string.Equals(error, "access_denied", StringComparison.OrdinalIgnoreCase)
+                ? "Google AdSense へのアクセスが承認されませんでした。"
+                : "Google OAuth でエラーが返されました。設定を確認して再度接続してください。";
+            TempData["StatusTone"] = "warning";
+            return RedirectToAction(nameof(Adsense));
+        }
+
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            TempData["StatusMessage"] = "Google OAuth の認証コードを受け取れませんでした。";
+            TempData["StatusTone"] = "error";
+            return RedirectToAction(nameof(Adsense));
+        }
+
+        try
+        {
+            await _adsenseService.ConnectAsync(code, BuildAdsenseRedirectUri(), cancellationToken);
+            TempData["StatusMessage"] = "Google AdSense との接続を保存しました。";
+            TempData["StatusTone"] = "success";
+        }
+        catch (Exception ex)
+        {
+            TempData["StatusMessage"] = ex.Message;
+            TempData["StatusTone"] = "error";
+        }
+
+        return RedirectToAction(nameof(Adsense));
+    }
+
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [HttpPost("adsense/disconnect")]
+    public async Task<IActionResult> AdsenseDisconnect(CancellationToken cancellationToken)
+    {
+        await _adsenseService.DisconnectAsync(cancellationToken);
+        TempData["StatusMessage"] = "Google AdSense 接続を解除しました。";
+        TempData["StatusTone"] = "warning";
+        return RedirectToAction(nameof(Adsense));
+    }
+
+    [Authorize]
     [ValidateAntiForgeryToken]
     [HttpPost("edit")]
     public async Task<IActionResult> Edit(
         PortfolioEditorViewModel model,
         string? editorAction,
+        int? editorScrollY,
         CancellationToken cancellationToken
     )
     {
@@ -149,7 +410,7 @@ public sealed class AdminController : Controller
             var (statusMessage, statusTone) = ApplyEditorAction(model, editorAction);
             model.ApplyStructuredEntriesToDocument();
             ModelState.Clear();
-            return RenderEditView(model, statusMessage, statusTone);
+            return RenderEditView(model, statusMessage, statusTone, editorScrollY);
         }
 
         model.ApplyStructuredEntriesToDocument();
@@ -273,7 +534,8 @@ public sealed class AdminController : Controller
     private IActionResult RenderEditView(
         PortfolioEditorViewModel model,
         string? statusMessage = null,
-        string? statusTone = null
+        string? statusTone = null,
+        int? restoreScrollY = null
     )
     {
         SetLayoutViewData(model.Document);
@@ -288,7 +550,59 @@ public sealed class AdminController : Controller
             ViewData["StatusTone"] = statusTone;
         }
 
+        if (restoreScrollY is >= 0)
+        {
+            ViewData["RestoreScrollY"] = restoreScrollY.Value;
+        }
+
         return View("Edit", model);
+    }
+
+    private AdminAccountViewModel BuildAccountViewModel(
+        AdminChangeLoginIdViewModel? loginIdForm = null,
+        AdminChangePasswordViewModel? passwordForm = null
+    )
+    {
+        return new AdminAccountViewModel
+        {
+            CurrentLoginId = User.Identity?.Name ?? "",
+            LoginIdForm = loginIdForm ?? new AdminChangeLoginIdViewModel
+            {
+                NewLoginId = User.Identity?.Name ?? ""
+            },
+            PasswordForm = passwordForm ?? new AdminChangePasswordViewModel()
+        };
+    }
+
+    private async Task<AdminUser?> GetCurrentAdminUserAsync()
+    {
+        return await _userManager.GetUserAsync(User);
+    }
+
+    private void AddIdentityErrors(IdentityResult result)
+    {
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, MapIdentityError(error));
+        }
+    }
+
+    private static string MapIdentityError(IdentityError error)
+    {
+        return error.Code switch
+        {
+            nameof(IdentityErrorDescriber.PasswordTooShort) => "パスワードが短すぎます。",
+            nameof(IdentityErrorDescriber.PasswordRequiresDigit) => "パスワードには数字を含めてください。",
+            nameof(IdentityErrorDescriber.PasswordRequiresLower) => "パスワードには小文字を含めてください。",
+            nameof(IdentityErrorDescriber.PasswordRequiresUpper) => "パスワードには大文字を含めてください。",
+            nameof(IdentityErrorDescriber.PasswordRequiresNonAlphanumeric) => "パスワードには記号を含めてください。",
+            nameof(IdentityErrorDescriber.InvalidUserName) => "IDに使用できない文字が含まれています。",
+            nameof(IdentityErrorDescriber.DuplicateUserName) => "このIDはすでに使用されています。",
+            nameof(IdentityErrorDescriber.PasswordMismatch) => "現在のパスワードが違います。",
+            _ => string.IsNullOrWhiteSpace(error.Description)
+                ? "アカウント情報の更新に失敗しました。"
+                : error.Description
+        };
     }
 
     private static (string Message, string Tone) ApplyEditorAction(
@@ -709,6 +1023,25 @@ public sealed class AdminController : Controller
         }
 
         assign(sanitized);
+    }
+
+    private string BuildAdsenseRedirectUri()
+    {
+        return Url.Action(nameof(AdsenseCallback), "Admin", values: null, protocol: Request.Scheme)
+            ?? throw new InvalidOperationException("Google AdSense callback URL を生成できませんでした。");
+    }
+
+    private static bool AdsenseOAuthStateMatches(string? expectedState, string? providedState)
+    {
+        if (string.IsNullOrWhiteSpace(expectedState) || string.IsNullOrWhiteSpace(providedState))
+        {
+            return false;
+        }
+
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedState);
+        var providedBytes = Encoding.UTF8.GetBytes(providedState);
+        return expectedBytes.Length == providedBytes.Length
+            && CryptographicOperations.FixedTimeEquals(expectedBytes, providedBytes);
     }
 
     private void SetLayoutViewData(PortfolioDocument document)

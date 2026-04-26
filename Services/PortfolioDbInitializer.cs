@@ -366,23 +366,6 @@ public sealed class PortfolioDbInitializer
         {
             var shouldUpdate = false;
 
-            if (!string.Equals(user.UserName, _adminAccountOptions.LoginId, StringComparison.Ordinal))
-            {
-                user.UserName = _adminAccountOptions.LoginId;
-                shouldUpdate = true;
-            }
-
-            var passwordVerification = string.IsNullOrWhiteSpace(user.PasswordHash)
-                ? PasswordVerificationResult.Failed
-                : _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, _adminAccountOptions.Password);
-
-            if (passwordVerification != PasswordVerificationResult.Success)
-            {
-                user.PasswordHash = _passwordHasher.HashPassword(user, _adminAccountOptions.Password);
-                user.SecurityStamp = Guid.NewGuid().ToString();
-                shouldUpdate = true;
-            }
-
             if (!user.LockoutEnabled)
             {
                 user.LockoutEnabled = true;

@@ -85,6 +85,38 @@ public sealed class PortfolioContentService
         return CloneSnapshot(snapshot);
     }
 
+    public async Task<PortfolioSnapshot> SaveAdsenseSettingsAsync(
+        AdsenseContent adsense,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var record = await LoadRecordAsync(asTracking: true, cancellationToken);
+
+        if (record is null)
+        {
+            var snapshot = await ResetToDefaultAsync(cancellationToken);
+            record = await LoadRecordAsync(asTracking: true, cancellationToken)
+                ?? throw new InvalidOperationException("Portfolio content could not be initialized.");
+        }
+
+        record.AdsenseIsEnabled = adsense.IsEnabled;
+        record.AdsensePublisherId = NormalizeOptionalText(adsense.PublisherId);
+        record.AdsenseHeadScript = NormalizeOptionalText(adsense.HeadScript);
+        record.AdsenseBodyScript = NormalizeOptionalText(adsense.BodyScript);
+        record.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var updatedSnapshot = new PortfolioSnapshot
+        {
+            Document = MapToDocument(record),
+            UpdatedAtUtc = record.UpdatedAtUtc
+        };
+
+        CacheSnapshot(updatedSnapshot);
+        return CloneSnapshot(updatedSnapshot);
+    }
+
     public async Task<PortfolioSnapshot> ResetToDefaultAsync(CancellationToken cancellationToken = default)
     {
         return await SaveAsync(PortfolioDefaults.Create(), cancellationToken);
@@ -117,6 +149,13 @@ public sealed class PortfolioContentService
             SiteTitle = record.SiteTitle,
             MetaDescription = record.MetaDescription,
             FaviconSrc = record.FaviconSrc,
+            Adsense = new AdsenseContent
+            {
+                IsEnabled = record.AdsenseIsEnabled,
+                PublisherId = record.AdsensePublisherId,
+                HeadScript = record.AdsenseHeadScript,
+                BodyScript = record.AdsenseBodyScript
+            },
             Profile = new ProfileContent
             {
                 Name = record.ProfileName,
@@ -385,6 +424,10 @@ public sealed class PortfolioContentService
         record.SiteTitle = document.SiteTitle;
         record.MetaDescription = document.MetaDescription;
         record.FaviconSrc = document.FaviconSrc;
+        record.AdsenseIsEnabled = document.Adsense.IsEnabled;
+        record.AdsensePublisherId = document.Adsense.PublisherId;
+        record.AdsenseHeadScript = document.Adsense.HeadScript;
+        record.AdsenseBodyScript = document.Adsense.BodyScript;
         record.ProfileName = document.Profile.Name;
         record.ProfileShortName = document.Profile.ShortName;
         record.ProfileRole = document.Profile.Role;
@@ -425,6 +468,10 @@ public sealed class PortfolioContentService
         document.MetaDescription = EmptyIfNull(document.MetaDescription);
         document.FaviconSrc = EmptyIfNull(document.FaviconSrc);
         document.FooterRole = EmptyIfNull(document.FooterRole);
+        document.Adsense ??= new AdsenseContent();
+        document.Adsense.PublisherId = EmptyIfNull(document.Adsense.PublisherId);
+        document.Adsense.HeadScript = EmptyIfNull(document.Adsense.HeadScript);
+        document.Adsense.BodyScript = EmptyIfNull(document.Adsense.BodyScript);
 
         document.Profile ??= new ProfileContent();
         document.Profile.Highlights ??= [];
@@ -561,6 +608,13 @@ public sealed class PortfolioContentService
             SiteTitle = source.SiteTitle,
             MetaDescription = source.MetaDescription,
             FaviconSrc = source.FaviconSrc,
+            Adsense = new AdsenseContent
+            {
+                IsEnabled = source.Adsense.IsEnabled,
+                PublisherId = source.Adsense.PublisherId,
+                HeadScript = source.Adsense.HeadScript,
+                BodyScript = source.Adsense.BodyScript
+            },
             FooterRole = source.FooterRole,
             Profile = new ProfileContent
             {
@@ -679,5 +733,10 @@ public sealed class PortfolioContentService
                     .ToList()
             }
         };
+    }
+
+    private static string NormalizeOptionalText(string? value)
+    {
+        return value?.Trim() ?? "";
     }
 }

@@ -7,6 +7,10 @@ public sealed class PortfolioContentRecord
     public string SiteTitle { get; set; } = "";
     public string MetaDescription { get; set; } = "";
     public string FaviconSrc { get; set; } = "";
+    public bool AdsenseIsEnabled { get; set; }
+    public string AdsensePublisherId { get; set; } = "";
+    public string AdsenseHeadScript { get; set; } = "";
+    public string AdsenseBodyScript { get; set; } = "";
     public string ProfileName { get; set; } = "";
     public string ProfileShortName { get; set; } = "";
     public string ProfileRole { get; set; } = "";

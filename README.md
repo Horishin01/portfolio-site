@@ -17,6 +17,7 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
 │   ├── AdminController.cs
 │   └── HomeController.cs
 ├── Data/
+│   ├── AdminAdsenseConnectionRecord.cs
 │   ├── PortfolioContentCollections.cs
 │   ├── PortfolioContentRecord.cs
 │   ├── PortfolioDatabaseOptions.cs
@@ -29,11 +30,13 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
 │       └── portfolio-site.service.example
 ├── Migrations/
 ├── Models/
+│   ├── Adsense/
 │   ├── Content/
 │   │   └── PortfolioDefaults.cs
 │   ├── Identity/
 │   └── Options/
 ├── Services/
+│   ├── GoogleAdsenseService.cs
 │   ├── PortfolioContentService.cs
 │   └── PortfolioDbInitializer.cs
 ├── ViewModels/
@@ -72,6 +75,10 @@ ASP.NET Core 8 の MVC 構成で動くポートフォリオサイトです。公
   管理者の平文パスワードです。起動時にアプリ側でハッシュ化して保存します。未指定なら `0000` を使います。必要なら `user-secrets`、env ファイル、環境変数で上書きできます。
 - `ConnectionStrings:PortfolioDatabase`
   開発では SQLite、その他の環境では MySQL を想定します。repo 上の `appsettings.json` にはダミー値を置き、実値は開発では `user-secrets`、本番では `ConnectionStrings__PortfolioDatabase` で渡してください。
+- `GoogleAdsense:ClientId`
+  任意設定です。管理画面 `/admin/adsense` から Google AdSense レポートを確認したい場合に、Google Cloud Console で作成した OAuth クライアント ID を設定します。
+- `GoogleAdsense:ClientSecret`
+  任意設定です。上記 OAuth クライアントの secret です。repo へ置かず、`user-secrets` または env ファイルで渡してください。
 - `ReverseProxy:KnownProxies`
   `X-Forwarded-*` を信頼する必要があるリバースプロキシの IP をカンマ区切りで指定します。同一ホスト上の Nginx または Apache から `127.0.0.1` 経由で流す構成なら通常は不要です。
 - `ReverseProxy:KnownNetworks`
@@ -99,6 +106,13 @@ dotnet user-secrets set "AdminAccount:LoginId" "Admin"
 
 ```bash
 dotnet user-secrets set "ConnectionStrings:PortfolioDatabase" "Server=127.0.0.1;Port=3306;Database=portfolio_site;User ID=portfolio_app;Password=change-me;CharSet=utf8mb4;"
+```
+
+AdSense レポートをローカル確認したい場合だけ、OAuth クライアントも `user-secrets` へ入れます。
+
+```bash
+dotnet user-secrets set "GoogleAdsense:ClientId" "your-google-oauth-client-id"
+dotnet user-secrets set "GoogleAdsense:ClientSecret" "your-google-oauth-client-secret"
 ```
 
 ```bash
@@ -148,6 +162,25 @@ bash scripts/add-migration.sh AddProjectTags sqlite
 dotnet ef database update --project PortfolioSite.csproj --context PortfolioDbContext -- --provider sqlite
 ```
 
+## Google AdSense Admin Reports
+
+管理画面 `/admin/adsense` では、Google AdSense の `PAGE_VIEWS`、`IMPRESSIONS`、`CLICKS`、`ESTIMATED_EARNINGS` を read-only で確認できます。
+
+セットアップ手順:
+
+1. Google Cloud Console で AdSense Management API を有効化する
+2. OAuth 2.0 client を作成する
+3. redirect URI に `https://<your-host>/admin/adsense/callback` を登録する
+4. 開発なら `user-secrets`、本番なら env ファイルへ `GoogleAdsense__ClientId` と `GoogleAdsense__ClientSecret` を設定する
+5. `/admin/adsense` で Google アカウントを接続する
+
+設計上の注意:
+
+- OAuth scope は `https://www.googleapis.com/auth/adsense.readonly` のみを使います
+- refresh token は ASP.NET Core Data Protection で暗号化して DB 保存します
+- client secret は DB に保存せず、`user-secrets` または env にのみ置きます
+- Google 側で token を失効させた場合や Data Protection key が変わった場合は、管理画面から再接続が必要です
+
 ## Production / MySQL Run
 
 1. MySQL で DB とユーザーを作成します。
@@ -181,6 +214,9 @@ bash scripts/create-runtime-env.sh ./.secrets/portfolio-site.env
   必要な場合だけ、信頼するリバースプロキシ IP をカンマ区切りで指定
 - `ReverseProxy__KnownNetworks`
   必要な場合だけ、信頼するリバースプロキシネットワークを CIDR のカンマ区切りで指定
+- `Configure Google AdSense OAuth client?`
+  `yes` なら `GoogleAdsense__ClientId` と `GoogleAdsense__ClientSecret` を続けて入力
+  `no` なら AdSense 連携設定は出力しません
 
 入力時の注意:
 
