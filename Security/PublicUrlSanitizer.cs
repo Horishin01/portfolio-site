@@ -21,7 +21,6 @@ public static class PublicUrlSanitizer
     ];
     private static readonly HashSet<string> AllowedMediaSchemes =
     [
-        Uri.UriSchemeHttp,
         Uri.UriSchemeHttps
     ];
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace PortfolioSite.Models.Content;
 
@@ -133,8 +134,25 @@ public sealed class CareerSectionContent
 
 public sealed class CareerItem
 {
+    private static readonly Regex PeriodDatePattern = new(
+        @"(?<!\d)(\d{4})(?!\d)(?:\s*年?\s*(\d{1,2})\s*月)?",
+        RegexOptions.Compiled
+    );
+
     [Display(Name = "期間")]
     public string Period { get; set; } = "";
+
+    [Display(Name = "開始年")]
+    public string PeriodStartYear { get; set; } = "";
+
+    [Display(Name = "開始月")]
+    public string PeriodStartMonth { get; set; } = "";
+
+    [Display(Name = "終了年")]
+    public string PeriodEndYear { get; set; } = "";
+
+    [Display(Name = "終了月")]
+    public string PeriodEndMonth { get; set; } = "";
 
     [Display(Name = "カテゴリ")]
     public string Category { get; set; } = "";
@@ -150,6 +168,84 @@ public sealed class CareerItem
 
     [Display(Name = "ハイライト")]
     public string Highlights { get; set; } = "";
+
+    public void EnsurePeriodYearFields()
+    {
+        Period ??= "";
+        PeriodStartYear ??= "";
+        PeriodStartMonth ??= "";
+        PeriodEndYear ??= "";
+        PeriodEndMonth ??= "";
+
+        if (!string.IsNullOrWhiteSpace(PeriodStartYear)
+            || !string.IsNullOrWhiteSpace(PeriodStartMonth)
+            || !string.IsNullOrWhiteSpace(PeriodEndYear)
+            || !string.IsNullOrWhiteSpace(PeriodEndMonth))
+        {
+            return;
+        }
+
+        var dates = PeriodDatePattern.Matches(Period)
+            .Select(match => new
+            {
+                Year = match.Groups[1].Value,
+                Month = NormalizeMonth(match.Groups[2].Value)
+            })
+            .ToList();
+
+        if (dates.Count > 0)
+        {
+            PeriodStartYear = dates[0].Year;
+            PeriodStartMonth = dates[0].Month;
+        }
+
+        if (Period.Contains("現在", StringComparison.Ordinal))
+        {
+            PeriodEndYear = "現在";
+            return;
+        }
+
+        if (dates.Count > 1)
+        {
+            PeriodEndYear = dates[1].Year;
+            PeriodEndMonth = dates[1].Month;
+        }
+    }
+
+    public void ApplyPeriodFromYearFields()
+    {
+        EnsurePeriodYearFields();
+
+        var startYear = PeriodStartYear.Trim();
+        var startMonth = NormalizeMonth(PeriodStartMonth);
+        var endYear = PeriodEndYear.Trim();
+        var endMonth = NormalizeMonth(PeriodEndMonth);
+        var now = DateTime.Now;
+
+        Period = (startYear, endYear) switch
+        {
+            ({ Length: > 0 }, "現在") => $"{FormatYearMonth(startYear, startMonth)}～現在{FormatYearMonth(now.Year.ToString(), now.Month.ToString())}",
+            ({ Length: > 0 }, { Length: > 0 }) => $"{FormatYearMonth(startYear, startMonth)}～{FormatYearMonth(endYear, endMonth)}",
+            ({ Length: > 0 }, _) => FormatYearMonth(startYear, startMonth),
+            (_, "現在") => $"現在{FormatYearMonth(now.Year.ToString(), now.Month.ToString())}",
+            (_, { Length: > 0 }) => FormatYearMonth(endYear, endMonth),
+            _ => Period.Trim()
+        };
+    }
+
+    private static string FormatYearMonth(string year, string month)
+    {
+        return string.IsNullOrWhiteSpace(month)
+            ? $"{year}年"
+            : $"{year}年 {month}月";
+    }
+
+    private static string NormalizeMonth(string? month)
+    {
+        return int.TryParse(month, out var parsedMonth) && parsedMonth is >= 1 and <= 12
+            ? parsedMonth.ToString()
+            : "";
+    }
 }
 
 public sealed class SkillsSectionContent

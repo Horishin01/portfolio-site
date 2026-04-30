@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using PortfolioSite.Models.Adsense;
 using PortfolioSite.Models.Content;
+using PortfolioSite.Security;
 
 namespace PortfolioSite.ViewModels;
 
@@ -40,9 +41,7 @@ public sealed class AdminAdsenseViewModel
     public IReadOnlyList<AdminAdsenseSiteMetricViewModel> TopSites { get; init; } = [];
 
     public bool HasMetrics => PageViews30Days.HasValue;
-    public bool HasPublishCode =>
-        !string.IsNullOrWhiteSpace(AdsenseHeadScript)
-        || !string.IsNullOrWhiteSpace(AdsenseBodyScript);
+    public bool HasPublishCode => GoogleAdsensePublisherId.IsValid(AdsensePublisherId);
 
     public static AdminAdsenseViewModel FromSnapshot(
         GoogleAdsenseDashboardSnapshot snapshot,
@@ -96,8 +95,8 @@ public sealed class AdminAdsenseViewModel
         {
             IsEnabled = AdsenseIsEnabled,
             PublisherId = AdsensePublisherId?.Trim() ?? "",
-            HeadScript = AdsenseHeadScript?.Trim() ?? "",
-            BodyScript = AdsenseBodyScript?.Trim() ?? ""
+            HeadScript = "",
+            BodyScript = ""
         };
     }
 

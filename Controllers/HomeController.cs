@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using PortfolioSite.Models.Content;
+using PortfolioSite.Security;
 using PortfolioSite.Services;
 using PortfolioSite.ViewModels;
 
@@ -81,8 +82,8 @@ public sealed class HomeController : Controller
 
     private void SetAdsenseViewData(PortfolioDocument document)
     {
-        ViewData["AdsenseEnabled"] = document.Adsense.IsEnabled;
-        ViewData["AdsenseHeadScript"] = document.Adsense.HeadScript;
-        ViewData["AdsenseBodyScript"] = document.Adsense.BodyScript;
+        var publisherId = GoogleAdsensePublisherId.Normalize(document.Adsense.PublisherId);
+        ViewData["AdsenseEnabled"] = document.Adsense.IsEnabled && !string.IsNullOrWhiteSpace(publisherId);
+        ViewData["AdsensePublisherId"] = publisherId;
     }
 }

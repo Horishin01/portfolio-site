@@ -86,7 +86,7 @@
       <article class="portal-card">
         <span class="portal-card-label">広告コード</span>
         <strong>@publishStatus</strong>
-        <p>@(Model.HasPublishCode ? "公開ページへ挿入する追加コードが保存されています。" : "追加コードはまだ保存されていません。")</p>
+        <p>@(Model.HasPublishCode ? "公開ページへ挿入する Publisher ID が保存されています。" : "Publisher ID はまだ保存されていません。")</p>
       </article>
     </div>
 
@@ -94,10 +94,9 @@
       <div class="adsense-code-header">
         <div>
           <span class="portal-card-label">Publish code</span>
-          <h2>AdSense 追加コード</h2>
+          <h2>AdSense 公開設定</h2>
           <p>
-            Google AdSense の審査用コード、Auto ads、広告ユニット用 JS を保存できます。
-            有効化すると公開ページの head または body 末尾へそのまま出力します。
+            任意の HTML / JavaScript は保存せず、Publisher ID から検証済みの AdSense loader だけを公開ページへ出力します。
           </p>
         </div>
         <span class="adsense-state-badge @(Model.AdsenseIsEnabled ? "is-live" : string.Empty)">@publishStatus</span>
@@ -108,37 +107,27 @@
           <div class="field">
             <label asp-for="AdsensePublisherId"></label>
             <input asp-for="AdsensePublisherId" placeholder="ca-pub-0000000000000000" />
-            <p class="field-help">入力すると、下のサンプルコードの client 値を確認しやすくなります。</p>
+            <span asp-validation-for="AdsensePublisherId" class="field-validation-error"></span>
+            <p class="field-help">Google AdSense の Publisher ID だけを保存します。形式は <code>ca-pub-</code> + 16桁の数字です。</p>
           </div>
           <div class="field adsense-toggle-field">
             <label class="adsense-toggle">
               <input asp-for="AdsenseIsEnabled" />
               <span>
                 <strong>公開ページに出力する</strong>
-                <small>保存済みコードをトップページと個別ページで有効にします。</small>
+                <small>検証済み Publisher ID から生成した loader をトップページと個別ページで有効にします。</small>
               </span>
             </label>
-          </div>
-          <div class="field field-full">
-            <label asp-for="AdsenseHeadScript"></label>
-            <textarea asp-for="AdsenseHeadScript" class="adsense-code-textarea" spellcheck="false" placeholder="@suggestedHeadScript"></textarea>
-            <span asp-validation-for="AdsenseHeadScript" class="field-validation-error"></span>
-            <p class="field-help">Google が案内する <code>&lt;script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"...&gt;&lt;/script&gt;</code> は通常ここに貼ります。</p>
-          </div>
-          <div class="field field-full">
-            <label asp-for="AdsenseBodyScript"></label>
-            <textarea asp-for="AdsenseBodyScript" class="adsense-code-textarea" spellcheck="false"></textarea>
-            <p class="field-help">特定位置ではなく body 末尾へ置きたい追加 JS がある場合だけ使います。空欄でも保存できます。</p>
           </div>
         </div>
 
         <div class="adsense-code-preview">
-          <span class="portal-card-label">loader sample</span>
+          <span class="portal-card-label">generated loader</span>
           <code>@suggestedHeadScript</code>
         </div>
 
         <div class="portal-actions">
-          <button class="button" type="submit">追加コードを保存</button>
+          <button class="button" type="submit">公開設定を保存</button>
           <a class="button button-ghost" asp-controller="Home" asp-action="Index" target="_blank" rel="noreferrer">公開ページを確認</a>
         </div>
       </form>

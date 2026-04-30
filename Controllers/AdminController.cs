@@ -145,14 +145,42 @@ public sealed class AdminController : Controller
         var snapshot = await _contentService.GetSnapshotAsync(cancellationToken);
         SetLayoutViewData(snapshot.Document);
 
-        return View(new AdminAccountViewModel
+        var model = new AdminAccountViewModel
         {
             CurrentLoginId = User.Identity?.Name ?? "",
             LoginIdForm = new AdminChangeLoginIdViewModel
             {
                 NewLoginId = User.Identity?.Name ?? ""
             }
-        });
+        };
+        await PopulateTwoFactorPreparationAsync(model);
+
+        return View(model);
+    }
+
+    [Authorize]
+    [ValidateAntiForgeryToken]
+    [HttpPost("account/two-factor/prepare")]
+    public async Task<IActionResult> PrepareTwoFactorAuthenticator()
+    {
+        var user = await GetCurrentAdminUserAsync();
+        if (user is null)
+        {
+            return Challenge();
+        }
+
+        var resetResult = await _userManager.ResetAuthenticatorKeyAsync(user);
+        if (!resetResult.Succeeded)
+        {
+            AddIdentityErrors(resetResult);
+            return await RenderAccountViewAsync();
+        }
+
+        await _signInManager.RefreshSignInAsync(user);
+
+        TempData["StatusMessage"] = "認証アプリ登録用キーを発行しました。まだログイン時の二段階認証は有効化していません。";
+        TempData["StatusTone"] = "success";
+        return RedirectToAction(nameof(Account));
     }
 
     [Authorize]
@@ -168,7 +196,7 @@ public sealed class AdminController : Controller
 
         if (!ModelState.IsValid)
         {
-            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+            return await RenderAccountViewAsync(loginIdForm: model);
         }
 
         var user = await GetCurrentAdminUserAsync();
@@ -181,7 +209,7 @@ public sealed class AdminController : Controller
         {
             ModelState.AddModelError("LoginIdForm.CurrentPassword", "現在のパスワードが違います。");
             model.CurrentPassword = "";
-            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+            return await RenderAccountViewAsync(loginIdForm: model);
         }
 
         var newLoginId = model.NewLoginId.Trim();
@@ -190,7 +218,7 @@ public sealed class AdminController : Controller
         {
             ModelState.AddModelError("LoginIdForm.NewLoginId", "このIDはすでに使用されています。");
             model.CurrentPassword = "";
-            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+            return await RenderAccountViewAsync(loginIdForm: model);
         }
 
         var setNameResult = await _userManager.SetUserNameAsync(user, newLoginId);
@@ -198,12 +226,21 @@ public sealed class AdminController : Controller
         {
             AddIdentityErrors(setNameResult);
             model.CurrentPassword = "";
-            return View(nameof(Account), BuildAccountViewModel(loginIdForm: model));
+            return await RenderAccountViewAsync(loginIdForm: model);
+        }
+
+        var stampResult = await _userManager.UpdateSecurityStampAsync(user);
+        if (!stampResult.Succeeded)
+        {
+            AddIdentityErrors(stampResult);
+            model.CurrentPassword = "";
+            return await RenderAccountViewAsync(loginIdForm: model);
         }
 
         await _signInManager.RefreshSignInAsync(user);
         TempData["StatusMessage"] = "ログインIDを変更しました。";
         TempData["StatusTone"] = "success";
+        TempData["AdminSessionEvent"] = "account-updated";
         return RedirectToAction(nameof(Account));
     }
 
@@ -220,7 +257,7 @@ public sealed class AdminController : Controller
 
         if (!ModelState.IsValid)
         {
-            return View(nameof(Account), BuildAccountViewModel(passwordForm: model));
+            return await RenderAccountViewAsync(passwordForm: model);
         }
 
         var user = await GetCurrentAdminUserAsync();
@@ -236,12 +273,23 @@ public sealed class AdminController : Controller
             model.CurrentPassword = "";
             model.NewPassword = "";
             model.ConfirmPassword = "";
-            return View(nameof(Account), BuildAccountViewModel(passwordForm: model));
+            return await RenderAccountViewAsync(passwordForm: model);
+        }
+
+        var stampResult = await _userManager.UpdateSecurityStampAsync(user);
+        if (!stampResult.Succeeded)
+        {
+            AddIdentityErrors(stampResult);
+            model.CurrentPassword = "";
+            model.NewPassword = "";
+            model.ConfirmPassword = "";
+            return await RenderAccountViewAsync(passwordForm: model);
         }
 
         await _signInManager.RefreshSignInAsync(user);
         TempData["StatusMessage"] = "パスワードを変更しました。";
         TempData["StatusTone"] = "success";
+        TempData["AdminSessionEvent"] = "account-updated";
         return RedirectToAction(nameof(Account));
     }
 
@@ -262,13 +310,20 @@ public sealed class AdminController : Controller
     public async Task<IActionResult> AdsenseCode(AdminAdsenseViewModel model, CancellationToken cancellationToken)
     {
         var adsense = model.ToAdsenseContent();
-        if (adsense.IsEnabled
-            && string.IsNullOrWhiteSpace(adsense.HeadScript)
-            && string.IsNullOrWhiteSpace(adsense.BodyScript))
+        if (!string.IsNullOrWhiteSpace(adsense.PublisherId)
+            && !GoogleAdsensePublisherId.IsValid(adsense.PublisherId))
         {
             ModelState.AddModelError(
-                nameof(AdminAdsenseViewModel.AdsenseHeadScript),
-                "AdSense を有効にする場合は、head または body 末尾の追加コードを入力してください。"
+                nameof(AdminAdsenseViewModel.AdsensePublisherId),
+                "Publisher ID は ca-pub- から始まる 16 桁の数字で入力してください。"
+            );
+        }
+
+        if (adsense.IsEnabled && !GoogleAdsensePublisherId.IsValid(adsense.PublisherId))
+        {
+            ModelState.AddModelError(
+                nameof(AdminAdsenseViewModel.AdsensePublisherId),
+                "AdSense を有効にする場合は、有効な Publisher ID を入力してください。"
             );
         }
 
@@ -284,8 +339,8 @@ public sealed class AdminController : Controller
         var updatedSnapshot = await _contentService.SaveAdsenseSettingsAsync(adsense, cancellationToken);
         SetLayoutViewData(updatedSnapshot.Document);
         TempData["StatusMessage"] = adsense.IsEnabled
-            ? "AdSense 追加コードを保存し、公開ページへの出力を有効にしました。"
-            : "AdSense 追加コードを保存しました。公開ページへの出力は無効です。";
+            ? "AdSense Publisher ID を保存し、公開ページへの出力を有効にしました。"
+            : "AdSense Publisher ID を保存しました。公開ページへの出力は無効です。";
         TempData["StatusTone"] = "success";
         return RedirectToAction(nameof(Adsense));
     }
@@ -522,6 +577,7 @@ public sealed class AdminController : Controller
     public async Task<IActionResult> Logout()
     {
         await _signInManager.SignOutAsync();
+        TempData["AdminSessionEvent"] = "logout";
         return RedirectToAction(nameof(Login));
     }
 
@@ -571,6 +627,37 @@ public sealed class AdminController : Controller
                 NewLoginId = User.Identity?.Name ?? ""
             },
             PasswordForm = passwordForm ?? new AdminChangePasswordViewModel()
+        };
+    }
+
+    private async Task<IActionResult> RenderAccountViewAsync(
+        AdminChangeLoginIdViewModel? loginIdForm = null,
+        AdminChangePasswordViewModel? passwordForm = null
+    )
+    {
+        var model = BuildAccountViewModel(loginIdForm, passwordForm);
+        await PopulateTwoFactorPreparationAsync(model);
+        return View(nameof(Account), model);
+    }
+
+    private async Task PopulateTwoFactorPreparationAsync(AdminAccountViewModel model)
+    {
+        var user = await GetCurrentAdminUserAsync();
+        if (user is null)
+        {
+            return;
+        }
+
+        var authenticatorKey = await _userManager.GetAuthenticatorKeyAsync(user) ?? "";
+        var formattedKey = TotpAuthenticatorUriBuilder.FormatSharedKey(authenticatorKey);
+        model.TwoFactor = new AdminTwoFactorPreparationViewModel
+        {
+            IsEnabled = await _userManager.GetTwoFactorEnabledAsync(user),
+            HasAuthenticatorKey = !string.IsNullOrWhiteSpace(authenticatorKey),
+            SharedKey = formattedKey,
+            AuthenticatorUri = string.IsNullOrWhiteSpace(authenticatorKey)
+                ? ""
+                : TotpAuthenticatorUriBuilder.BuildUri("Portfolio Admin", user.UserName ?? model.CurrentLoginId, authenticatorKey)
         };
     }
 
@@ -917,6 +1004,11 @@ public sealed class AdminController : Controller
             throw new InvalidOperationException(formatMessage);
         }
 
+        if (!await HasAllowedImageSignatureAsync(imageFile, extension, cancellationToken))
+        {
+            throw new InvalidOperationException(formatMessage);
+        }
+
         var uploadsRoot = Path.Combine(_environment.WebRootPath, uploadDirectory);
         Directory.CreateDirectory(uploadsRoot);
 
@@ -931,6 +1023,45 @@ public sealed class AdminController : Controller
         DeleteManagedImage(currentImageSrc, uploadDirectory);
 
         return $"/{uploadDirectory.Replace("\\", "/", StringComparison.Ordinal)}/{fileName}";
+    }
+
+    private static async Task<bool> HasAllowedImageSignatureAsync(
+        IFormFile imageFile,
+        string extension,
+        CancellationToken cancellationToken
+    )
+    {
+        var buffer = new byte[16];
+        await using var stream = imageFile.OpenReadStream();
+        var length = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
+
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => HasPrefix(buffer, length, [0xFF, 0xD8, 0xFF]),
+            ".png" => HasPrefix(buffer, length, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+            ".gif" => HasAsciiPrefix(buffer, length, "GIF87a") || HasAsciiPrefix(buffer, length, "GIF89a"),
+            ".webp" => HasWebpSignature(buffer, length),
+            ".ico" => HasPrefix(buffer, length, [0x00, 0x00, 0x01, 0x00]),
+            _ => false
+        };
+    }
+
+    private static bool HasPrefix(byte[] value, int length, ReadOnlySpan<byte> prefix)
+    {
+        return length >= prefix.Length && value.AsSpan(0, prefix.Length).SequenceEqual(prefix);
+    }
+
+    private static bool HasAsciiPrefix(byte[] value, int length, string prefix)
+    {
+        return length >= prefix.Length
+            && value.AsSpan(0, prefix.Length).SequenceEqual(Encoding.ASCII.GetBytes(prefix));
+    }
+
+    private static bool HasWebpSignature(byte[] value, int length)
+    {
+        return length >= 12
+            && HasAsciiPrefix(value, length, "RIFF")
+            && value.AsSpan(8, 4).SequenceEqual(Encoding.ASCII.GetBytes("WEBP"));
     }
 
     private void DeleteManagedImage(string? imagePath, string uploadDirectory)
@@ -971,7 +1102,7 @@ public sealed class AdminController : Controller
             document.FaviconSrc,
             sanitized => document.FaviconSrc = sanitized,
             PublicUrlSanitizer.SanitizeFaviconUrl,
-            "ファビコンURLは / で始まるサイト内パス、または http/https の ICO / PNG / WEBP / JPG / GIF を指定してください。"
+            "ファビコンURLは / で始まるサイト内パス、または https の ICO / PNG / WEBP / JPG / GIF を指定してください。"
         );
 
         SanitizeDocumentField(
@@ -979,7 +1110,7 @@ public sealed class AdminController : Controller
             document.Profile.HeroImageSrc,
             sanitized => document.Profile.HeroImageSrc = sanitized,
             PublicUrlSanitizer.SanitizeImageUrl,
-            "ヒーロー画像URLは / で始まるサイト内パス、または http/https の URL を指定してください。"
+            "ヒーロー画像URLは / で始まるサイト内パス、または https の URL を指定してください。"
         );
 
         for (var itemIndex = 0; itemIndex < document.PersonalSection.Items.Count; itemIndex++)
@@ -990,7 +1121,7 @@ public sealed class AdminController : Controller
                 personalItem.ImageSrc,
                 sanitized => personalItem.ImageSrc = sanitized,
                 PublicUrlSanitizer.SanitizeImageUrl,
-                "個人活動画像URLは / で始まるサイト内パス、または http/https の URL を指定してください。"
+                "個人活動画像URLは / で始まるサイト内パス、または https の URL を指定してください。"
             );
         }
 

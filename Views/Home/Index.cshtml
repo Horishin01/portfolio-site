@@ -43,6 +43,7 @@
         })
         .Where(entry => !string.IsNullOrWhiteSpace(entry.Href))
         .ToList();
+    var currentYear = DateTime.Now.Year;
 }
 <div class="background-grid" aria-hidden="true"></div>
 <div class="background-orb background-orb-left" aria-hidden="true"></div>
@@ -410,11 +411,43 @@
     </section>
   </main>
 
-  <footer class="site-footer">
-    <p>
-      <span>@Model.Profile.Name</span>
-      <span>·</span>
-      <span>@footerRole</span>
-    </p>
+  <footer class="site-footer" aria-label="サイトフッター">
+    <div class="footer-primary">
+      <a class="footer-brand" href="#top" aria-label="ページ上部へ移動">
+        <span class="brand-mark">@shortName</span>
+        <span>
+          <strong>@Model.Profile.Name</strong>
+          <small>@footerRole</small>
+        </span>
+      </a>
+
+      <nav class="footer-nav" aria-label="フッターナビゲーション">
+        <a href="#profile">PROFILE</a>
+        <a href="#career">CAREER</a>
+        <a href="#skills">SKILL</a>
+        <a href="#works">WORKS</a>
+        <a href="#personal">PERSONAL</a>
+        <a href="#contact">CONTACT</a>
+      </nav>
+    </div>
+
+    <div class="footer-secondary">
+      <p>&copy; @currentYear @Model.Profile.Name</p>
+      <div class="footer-links">
+        @if (!string.IsNullOrWhiteSpace(Model.Contact.Email))
+        {
+            <a href="mailto:@Model.Contact.Email">メール</a>
+        }
+        @foreach (var entry in safeContactLinks)
+        {
+            var isExternalLink = PublicUrlSanitizer.IsExternalHttpLink(entry.Href);
+            <a
+              href="@entry.Href"
+              target="@(isExternalLink ? "_blank" : null)"
+              rel="@(isExternalLink ? "noreferrer" : null)"
+            >@entry.Link.Label</a>
+        }
+      </div>
+    </div>
   </footer>
 </div>

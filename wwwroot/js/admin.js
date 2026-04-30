@@ -18,12 +18,30 @@
       return;
     }
 
-    requestAnimationFrame(() => {
+    if ("scrollRestoration" in history) {
+      history.scrollRestoration = "manual";
+    }
+
+    const restore = () => {
       window.scrollTo({
         top: saved,
         behavior: "auto"
       });
-    });
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: saved,
+          behavior: "auto"
+        });
+        editorShell?.classList.remove("restore-scroll-pending");
+      });
+    };
+
+    if (document.readyState === "complete") {
+      restore();
+      return;
+    }
+
+    window.addEventListener("load", restore, { once: true });
   };
 
   restoreEditorScrollPosition();
@@ -288,6 +306,133 @@
       }
     });
   }
+
+  document.querySelectorAll("[data-current-year-select]").forEach((select) => {
+    if (!(select instanceof HTMLSelectElement)) {
+      return;
+    }
+
+    const monthTargetId = select.getAttribute("data-current-month-target");
+    const monthSelect = monthTargetId ? document.getElementById(monthTargetId) : null;
+    if (!(monthSelect instanceof HTMLSelectElement)) {
+      return;
+    }
+
+    const syncCurrentState = () => {
+      const isCurrent = select.value === "現在";
+      monthSelect.disabled = isCurrent;
+      monthSelect.closest(".career-period-controls")?.classList.toggle("is-current", isCurrent);
+      if (isCurrent) {
+        monthSelect.value = "";
+      }
+    };
+
+    select.addEventListener("change", syncCurrentState);
+    syncCurrentState();
+  });
+
+  document.querySelectorAll("[data-character-count]").forEach((field) => {
+    if (!(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
+    const counter = field.parentElement?.querySelector(".character-counter");
+    if (!counter) {
+      return;
+    }
+
+    const limit = Number.parseInt(field.getAttribute("data-character-limit") || "", 10);
+    const updateCounter = () => {
+      const count = field.value.length;
+      counter.textContent = Number.isFinite(limit)
+        ? `${count} / ${limit} 文字目安`
+        : `${count} 文字`;
+      counter.classList.toggle("is-over", Number.isFinite(limit) && count > limit);
+    };
+
+    field.addEventListener("input", updateCounter);
+    updateCounter();
+  });
+
+  document.querySelectorAll("[data-personal-tabs]").forEach((scope) => {
+    if (!(scope instanceof HTMLElement)) {
+      return;
+    }
+
+    const tabs = Array.from(scope.querySelectorAll("[data-personal-tab]"));
+    const panels = Array.from(scope.querySelectorAll("[data-personal-tab-panel]"));
+    const collection = scope.querySelector("[data-personal-item-collection]");
+    const collectionEyebrow = scope.querySelector("[data-personal-collection-eyebrow]");
+    const collectionTitle = scope.querySelector("[data-personal-collection-title]");
+    const storageKey = scope.getAttribute("data-personal-tab-storage-key") || "portfolio-admin-personal-tab";
+    const defaultTab = "index";
+    const collectionLabels = {
+      all: ["全て表示", "個人活動の全ての編集項目を表示"],
+      listing: ["一覧カード", "トップページに並ぶカードだけを編集"],
+      detail: ["個別ページ", "カード遷移後の詳細ページだけを編集"],
+      shared: ["共通素材", "一覧カードと個別ページで共有する素材だけを編集"]
+    };
+
+    const activateTab = (tabName) => {
+      const resolvedTabName = tabs.some((tab) => tab.getAttribute("data-personal-tab") === tabName)
+        ? tabName
+        : defaultTab;
+
+      tabs.forEach((tab) => {
+        const isActive = tab.getAttribute("data-personal-tab") === resolvedTabName;
+        tab.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+      });
+
+      panels.forEach((panel) => {
+        const isActive = resolvedTabName === "all" || panel.getAttribute("data-personal-tab-panel") === resolvedTabName;
+        panel.classList.toggle("is-active", isActive);
+        panel.setAttribute("aria-hidden", String(!isActive));
+      });
+
+      if (collection instanceof HTMLElement) {
+        collection.classList.toggle("is-hidden", resolvedTabName === "index");
+      }
+
+      const labels = collectionLabels[resolvedTabName];
+      if (labels && collectionEyebrow && collectionTitle) {
+        collectionEyebrow.textContent = labels[0];
+        collectionTitle.textContent = labels[1];
+      }
+
+      scope.setAttribute("data-active-personal-tab", resolvedTabName);
+      sessionStorage.setItem(storageKey, resolvedTabName);
+    };
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", (event) => {
+        event.preventDefault();
+        activateTab(tab.getAttribute("data-personal-tab") || defaultTab);
+      });
+    });
+
+    const syncStickyTop = () => {
+      const commandHeader = document.querySelector(".editor-command-header");
+      const statusBar = document.querySelector(".editor-status-bar");
+      const visibleBottoms = [commandHeader, statusBar]
+        .filter((element) => element instanceof HTMLElement)
+        .map((element) => element.getBoundingClientRect())
+        .filter((rect) => rect.bottom > 0 && rect.top < window.innerHeight)
+        .map((rect) => rect.bottom);
+
+      const stickyTop = visibleBottoms.length > 0
+        ? Math.max(...visibleBottoms) + 8
+        : 12;
+
+      scope.style.setProperty("--personal-tab-sticky-top", `${stickyTop}px`);
+    };
+
+    syncStickyTop();
+    window.addEventListener("scroll", syncStickyTop, { passive: true });
+    window.addEventListener("resize", syncStickyTop);
+
+    activateTab(sessionStorage.getItem(storageKey) || defaultTab);
+  });
 
   const toggleButtons = document.querySelectorAll("[data-password-toggle]");
 

@@ -55,7 +55,10 @@ public static class PortfolioDefaults
                 [
                     new CareerItem
                     {
-                        Period = "2024 - 現在",
+                        Period = "2024年 4月～現在",
+                        PeriodStartYear = "2024",
+                        PeriodStartMonth = "4",
+                        PeriodEndYear = "現在",
                         Category = "勤務先",
                         Organization = "現在の勤務先",
                         Title = "インフラエンジニア",
@@ -64,7 +67,11 @@ public static class PortfolioDefaults
                     },
                     new CareerItem
                     {
-                        Period = "2021 - 2024",
+                        Period = "2021年 4月～2024年 3月",
+                        PeriodStartYear = "2021",
+                        PeriodStartMonth = "4",
+                        PeriodEndYear = "2024",
+                        PeriodEndMonth = "3",
                         Category = "勤務先",
                         Organization = "前職の勤務先",
                         Title = "運用 / 開発担当",
@@ -73,7 +80,11 @@ public static class PortfolioDefaults
                     },
                     new CareerItem
                     {
-                        Period = "2018 - 2021",
+                        Period = "2018年 4月～2021年 3月",
+                        PeriodStartYear = "2018",
+                        PeriodStartMonth = "4",
+                        PeriodEndYear = "2021",
+                        PeriodEndMonth = "3",
                         Category = "学校",
                         Organization = "情報系の学校名",
                         Title = "情報システム学科",

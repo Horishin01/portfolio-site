@@ -51,6 +51,33 @@
         return $"PersonalItemImageFile_{index}";
     }
 
+    static int? ParsePeriodNumber(string? value)
+    {
+        return int.TryParse(value, out var parsed) ? parsed : null;
+    }
+
+    static (int Year, int Month)? GetCareerTimelineKey(CareerItem item)
+    {
+        if (string.Equals(item.PeriodEndYear, "現在", StringComparison.Ordinal))
+        {
+            return (9999, 12);
+        }
+
+        var endYear = ParsePeriodNumber(item.PeriodEndYear);
+        if (endYear is int resolvedEndYear)
+        {
+            return (resolvedEndYear, ParsePeriodNumber(item.PeriodEndMonth) ?? 12);
+        }
+
+        var startYear = ParsePeriodNumber(item.PeriodStartYear);
+        if (startYear is int resolvedStartYear)
+        {
+            return (resolvedStartYear, ParsePeriodNumber(item.PeriodStartMonth) ?? 1);
+        }
+
+        return null;
+    }
+
     var tone = ViewData["StatusTone"] as string ?? TempData["StatusTone"] as string;
     var tempMessage = ViewData["StatusMessage"] as string ?? TempData["StatusMessage"] as string;
     var hasErrors = !ViewData.ModelState.IsValid;
@@ -62,6 +89,7 @@
         : tone is "warning" ? "is-warning"
         : string.Empty;
     var restoreScrollY = ViewData["RestoreScrollY"] as int?;
+    var adminShellClass = restoreScrollY is int ? "admin-shell is-visible restore-scroll-pending" : "admin-shell is-visible";
     var doc = Model.Document;
     var faviconPreviewSrc = PublicUrlSanitizer.SanitizeFaviconUrl(doc.FaviconSrc);
     var heroImagePreviewSrc = PublicUrlSanitizer.SanitizeImageUrl(doc.Profile.HeroImageSrc);
@@ -87,39 +115,23 @@
         ("contact-panel", "連絡", "連絡先", "fa-solid fa-paper-plane")
     };
     var additionalProfileTagOptions = GetAdditionalTagOptions(Model.ProfileTagEntries);
+    var careerTimelineRanks = doc.CareerSection.Items
+        .Select((item, index) => new
+        {
+            Index = index,
+            TimelineKey = GetCareerTimelineKey(item)
+        })
+        .Where(item => item.TimelineKey.HasValue)
+        .OrderByDescending(item => item.TimelineKey!.Value.Year)
+        .ThenByDescending(item => item.TimelineKey!.Value.Month)
+        .Select((item, rank) => new
+        {
+            item.Index,
+            Label = rank == 0 ? "時系列: 最新" : $"時系列: 過去 {rank}件前"
+        })
+        .ToDictionary(item => item.Index, item => item.Label);
 }
-@if (restoreScrollY is int scrollY)
-{
-  <style>
-    body {
-      visibility: hidden;
-    }
-  </style>
-  <script>
-    (() => {
-      const restoreY = @scrollY;
-      if ("scrollRestoration" in history) {
-        history.scrollRestoration = "manual";
-      }
-
-      const reveal = () => {
-        window.scrollTo(0, restoreY);
-        requestAnimationFrame(() => {
-          window.scrollTo(0, restoreY);
-          document.body.style.visibility = "visible";
-        });
-      };
-
-      if (document.readyState === "complete") {
-        reveal();
-        return;
-      }
-
-      window.addEventListener("load", reveal, { once: true });
-    })();
-  </script>
-}
-<div class="admin-shell is-visible" id="adminShell" data-restore-scroll-y="@restoreScrollY">
+<div class="@adminShellClass" id="adminShell" data-restore-scroll-y="@restoreScrollY">
   <header class="admin-header editor-command-header">
     <div class="editor-command-copy">
       <p class="admin-eyebrow">Content Studio</p>
@@ -135,7 +147,7 @@
       <a class="button button-ghost" asp-action="Index"><i class="fa-solid fa-table-columns" aria-hidden="true"></i><span>ポータル</span></a>
       <a class="button button-ghost" asp-action="Adsense"><i class="fa-brands fa-google" aria-hidden="true"></i><span>AdSense</span></a>
       <a class="button button-ghost" asp-action="Account"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>アカウント</span></a>
-      <form asp-action="Logout" method="post" class="inline-form">
+      <form asp-action="Logout" method="post" class="inline-form" data-admin-session-event-submit="logout">
         <button class="button button-ghost" type="submit"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i><span>ログアウト</span></button>
       </form>
     </div>
@@ -269,7 +281,7 @@
                   <input asp-for="FaviconFile" id="faviconFile" type="file" accept=".ico,.png,.webp,.jpg,.jpeg,.gif" />
                   <p class="field-help">ICO / PNG / WEBP / JPG / GIF に対応しています。1MBまでアップロードでき、ファビコンURLより優先して保存されます。</p>
                   <p class="field-help">未設定の場合は既定のアイコンを使用します。</p>
-                  <p class="field-help">URLは / で始まるサイト内パス、または http/https の画像URLのみ指定できます。SVG は受け付けません。</p>
+                  <p class="field-help">URLは / で始まるサイト内パス、または https の画像URLのみ指定できます。SVG は受け付けません。</p>
 
                   <div class="hero-upload-meta">
                     <div class="field">
@@ -321,7 +333,7 @@
                   <input asp-for="HeroImageFile" id="heroImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,.gif" />
                   <p class="field-help">JPG / PNG / WEBP / GIF に対応しています。5MBまでアップロードでき、画像URLより優先して保存されます。</p>
                   <p class="field-help">画像をアップロードしない場合は、下の画像URLを使用します。画像の説明文もここで設定できます。</p>
-                  <p class="field-help">画像URLは / で始まるサイト内パス、または http/https の URL のみ指定できます。</p>
+                  <p class="field-help">画像URLは / で始まるサイト内パス、または https の URL のみ指定できます。</p>
 
                   <div class="hero-upload-meta">
                     <div class="field">
@@ -558,17 +570,81 @@
               }
               @for (var i = 0; i < doc.CareerSection.Items.Count; i++)
               {
+                  var timelineLabel = careerTimelineRanks.TryGetValue(i, out var resolvedTimelineLabel)
+                      ? resolvedTimelineLabel
+                      : "時系列: 期間未設定";
                   <article class="item-card">
                     <div class="item-card-header">
-                      <h4>在籍歴 @(i + 1)</h4>
+                      <div class="item-card-title">
+                        <h4>在籍歴 @(i + 1)</h4>
+                        <div class="item-card-tag-row">
+                          <span class="item-card-tag is-timeline">@timelineLabel</span>
+                          <span class="item-card-tag is-order">公開表示順 @(i + 1)</span>
+                        </div>
+                      </div>
                       <div class="inline-actions">
                         <button class="button button-danger" type="submit" name="editorAction" value="remove:career-item:@i">削除</button>
                       </div>
                     </div>
                     <div class="field-grid">
-                      <div class="field">
-                        <label asp-for="Document.CareerSection.Items[i].Period"></label>
-                        <input asp-for="Document.CareerSection.Items[i].Period" />
+                      <div class="field field-full career-period-field">
+                        <div class="field-inline-header">
+                          <label>期間</label>
+                          <span class="editor-chip">@doc.CareerSection.Items[i].Period</span>
+                        </div>
+                        <div class="career-period-grid">
+                          <div class="career-period-group">
+                            <span class="career-period-label">開始</span>
+                            <div class="career-period-controls">
+                              <select asp-for="Document.CareerSection.Items[i].PeriodStartYear" aria-label="開始年">
+                                <option value="">年</option>
+                                @foreach (var year in PortfolioEditorOptionCatalog.CareerYearOptions)
+                                {
+                                    <option value="@year">@year 年</option>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(doc.CareerSection.Items[i].PeriodStartYear)
+                                    && !PortfolioEditorOptionCatalog.CareerYearOptions.Contains(doc.CareerSection.Items[i].PeriodStartYear))
+                                {
+                                    <option value="@doc.CareerSection.Items[i].PeriodStartYear" selected>既存値: @doc.CareerSection.Items[i].PeriodStartYear 年</option>
+                                }
+                              </select>
+                              <select asp-for="Document.CareerSection.Items[i].PeriodStartMonth" aria-label="開始月">
+                                <option value="">月</option>
+                                @foreach (var month in PortfolioEditorOptionCatalog.MonthOptions)
+                                {
+                                    <option value="@month">@month 月</option>
+                                }
+                              </select>
+                            </div>
+                          </div>
+                          <div class="career-period-group">
+                            <span class="career-period-label">終了</span>
+                            <div class="career-period-controls">
+                              <select asp-for="Document.CareerSection.Items[i].PeriodEndYear" aria-label="終了年" data-current-year-select data-current-month-target="career-end-month-@i">
+                                <option value="">年</option>
+                                <option value="現在">現在</option>
+                                @foreach (var year in PortfolioEditorOptionCatalog.CareerYearOptions)
+                                {
+                                    <option value="@year">@year 年</option>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(doc.CareerSection.Items[i].PeriodEndYear)
+                                    && doc.CareerSection.Items[i].PeriodEndYear != "現在"
+                                    && !PortfolioEditorOptionCatalog.CareerYearOptions.Contains(doc.CareerSection.Items[i].PeriodEndYear))
+                                {
+                                    <option value="@doc.CareerSection.Items[i].PeriodEndYear" selected>既存値: @doc.CareerSection.Items[i].PeriodEndYear 年</option>
+                                }
+                              </select>
+                              <select asp-for="Document.CareerSection.Items[i].PeriodEndMonth" id="career-end-month-@i" aria-label="終了月">
+                                <option value="">月</option>
+                                @foreach (var month in PortfolioEditorOptionCatalog.MonthOptions)
+                                {
+                                    <option value="@month">@month 月</option>
+                                }
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                        <p class="field-help">年は1900年からサーバ日時の翌年まで自動で表示します。「現在」を選ぶと、公開ページではサーバ日時の「現在yyyy年 M月」として表示します。</p>
                       </div>
                       <div class="field">
                         <label asp-for="Document.CareerSection.Items[i].Category"></label>
@@ -825,29 +901,61 @@
           <p class="section-eyebrow">個人</p>
           <h2>個人活動</h2>
           <p class="section-description">
-            個人活動セクションの一覧カードと個別ページを編集します。入力欄を「一覧カード」「個別ページ」「共通設定」に分け、どこへ出る内容か判断しやすくしています。
+            トップページの PERSONAL セクション、一覧カード、個別ページを編集します。
           </p>
           <div class="section-header-meta">
             <span class="section-meta-tag">@doc.PersonalSection.Items.Count 件</span>
           </div>
         </div>
-        <div class="admin-section-content">
-          <div class="field-grid">
-            <div class="field">
-              <label asp-for="Document.PersonalSection.Heading"></label>
-              <input asp-for="Document.PersonalSection.Heading" />
-            </div>
-            <div class="field field-full">
-              <label asp-for="Document.PersonalSection.Intro"></label>
-              <textarea asp-for="Document.PersonalSection.Intro"></textarea>
-            </div>
+        <div class="admin-section-content" data-personal-tabs data-active-personal-tab="index" data-personal-tab-storage-key="portfolio-admin-personal-tab">
+          <div class="personal-tablist" role="tablist" aria-label="個人活動の編集画面">
+            <button class="personal-tab" id="personal-tab-all" type="button" role="tab" aria-selected="false" data-personal-tab="all">
+              <span>全</span>
+              全て表示
+            </button>
+            <button class="personal-tab is-active" id="personal-tab-index" type="button" role="tab" aria-selected="true" data-personal-tab="index">
+              <span>1</span>
+              トップ共通
+            </button>
+            <button class="personal-tab" id="personal-tab-listing" type="button" role="tab" aria-selected="false" data-personal-tab="listing">
+              <span>2</span>
+              一覧カード
+            </button>
+            <button class="personal-tab" id="personal-tab-detail" type="button" role="tab" aria-selected="false" data-personal-tab="detail">
+              <span>3</span>
+              個別ページ
+            </button>
+            <button class="personal-tab" id="personal-tab-shared" type="button" role="tab" aria-selected="false" data-personal-tab="shared">
+              <span>4</span>
+              共通素材
+            </button>
           </div>
 
-          <div class="collection">
+          <section class="personal-channel-card is-index" aria-label="トップページ PERSONAL 共通設定" data-personal-tab-panel="index">
+            <div class="personal-channel-header">
+              <span class="editor-scope-label">トップページ</span>
+              <h3>PERSONAL セクション共通設定</h3>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label asp-for="Document.PersonalSection.Heading"></label>
+                <p class="field-help">トップページの PERSONAL セクション見出しです。例: 個人活動</p>
+                <input asp-for="Document.PersonalSection.Heading" />
+              </div>
+              <div class="field field-full">
+                <label asp-for="Document.PersonalSection.Intro"></label>
+                <p class="field-help">トップページの一覧全体に出る導入文です。各カードの説明ではありません。</p>
+                <textarea asp-for="Document.PersonalSection.Intro" data-character-count data-character-limit="180"></textarea>
+                <p class="field-help character-counter" aria-live="polite">0 / 180 文字目安</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="collection" data-personal-item-collection>
             <div class="collection-header">
               <div>
-                <p class="section-eyebrow">項目</p>
-                <h3>個人活動カード</h3>
+                <p class="section-eyebrow" data-personal-collection-eyebrow>項目</p>
+                <h3 data-personal-collection-title>個人活動ごとの編集</h3>
               </div>
               <div class="inline-actions">
                 <button class="button button-secondary" type="submit" name="editorAction" value="add:personal-item">個人活動を追加</button>
@@ -880,6 +988,7 @@
                       <div class="inline-actions">
                         <a
                           class="button button-ghost"
+                          data-personal-action="listing"
                           asp-controller="Home"
                           asp-action="Index"
                           asp-fragment="personal"
@@ -890,6 +999,7 @@
                         </a>
                         <a
                           class="button button-secondary"
+                          data-personal-action="detail"
                           asp-controller="Home"
                           asp-action="Personal"
                           asp-route-index="@i"
@@ -904,62 +1014,84 @@
                     </div>
                     <div class="item-card-meta">
                       <div class="item-card-tag-row" aria-label="表示先">
-                        <span class="item-card-tag">トップページ一覧</span>
-                        <span class="item-card-tag is-detail">個別ページ</span>
-                        <span class="item-card-tag is-shared">@(hasPersonalDetailContent ? "個別ページ設定あり" : "個別ページ設定は概要を流用")</span>
+                        <span class="item-card-tag">一覧カード</span>
+                        <span class="item-card-tag is-detail">個別ページ @(hasPersonalDetailContent ? "設定あり" : "概要を流用")</span>
+                        <span class="item-card-tag is-shared">共通素材</span>
                       </div>
                       <p class="field-help item-card-route">個別URL: /personal/@i@(string.IsNullOrWhiteSpace(personalSlug) ? string.Empty : $"/{personalSlug}")</p>
-                      <p class="field-help">上段の一覧カード設定はトップページの PERSONAL に出ます。個別ページ設定はカード遷移後の詳細ページに出ます。</p>
+                      <div class="personal-item-jump" aria-label="この個人活動の編集先">
+                        <a href="#personal-listing-@i">一覧カード</a>
+                        <a href="#personal-detail-@i">個別ページ</a>
+                        <a href="#personal-shared-@i">共通素材</a>
+                      </div>
                     </div>
                     <div class="editor-scope-grid">
-                      <section class="editor-scope-card is-listing" aria-label="一覧カード設定">
+                      <section class="editor-scope-card is-listing" id="personal-listing-@i" aria-label="一覧カード設定" data-personal-tab-panel="listing">
                         <span class="editor-scope-label">一覧カード</span>
                         <h5>トップページの PERSONAL 一覧に出す内容</h5>
-                        <p>カード上で最初に見える情報です。ここだけ見ても内容が伝わる短さで揃えます。</p>
                         <div class="field-grid">
                           <div class="field">
                             <label asp-for="Document.PersonalSection.Items[i].Category"></label>
-                            <input asp-for="Document.PersonalSection.Items[i].Category" />
+                            <p class="field-help">カード上部の分類です。例: 個人開発、学習記録、コミュニティ</p>
+                            <input asp-for="Document.PersonalSection.Items[i].Category" data-character-count data-character-limit="24" />
+                            <p class="field-help character-counter" aria-live="polite">0 / 24 文字目安</p>
                           </div>
                           <div class="field">
                             <label asp-for="Document.PersonalSection.Items[i].Title"></label>
-                            <input asp-for="Document.PersonalSection.Items[i].Title" />
+                            <p class="field-help">一覧カードと個別ページのタイトルです。URL の識別にも使います。</p>
+                            <input asp-for="Document.PersonalSection.Items[i].Title" data-character-count data-character-limit="60" />
+                            <p class="field-help character-counter" aria-live="polite">0 / 60 文字目安</p>
                           </div>
                           <div class="field field-full">
                             <label asp-for="Document.PersonalSection.Items[i].Summary"></label>
-                            <textarea asp-for="Document.PersonalSection.Items[i].Summary"></textarea>
-                            <p class="field-help">一覧カードで最初に見せる短い説明です。PERSONAL セクションではこの内容を中心に表示します。</p>
+                            <p class="field-help">一覧カードで最初に見える短い説明です。詳細説明は個別ページ専用欄に入力します。</p>
+                            <textarea asp-for="Document.PersonalSection.Items[i].Summary" data-character-count data-character-limit="140"></textarea>
+                            <p class="field-help character-counter" aria-live="polite">0 / 140 文字目安</p>
                           </div>
                         </div>
                       </section>
 
-                      <section class="editor-scope-card is-detail" aria-label="個別ページ設定">
-                        <span class="editor-scope-label">個別ページ</span>
+                      <section class="editor-scope-card is-detail" id="personal-detail-@i" aria-label="個別ページ設定" data-personal-tab-panel="detail">
+                        <div class="editor-scope-heading">
+                          <span class="editor-scope-label">個別ページ専用</span>
+                          <a
+                            class="editor-scope-link"
+                            asp-controller="Home"
+                            asp-action="Personal"
+                            asp-route-index="@i"
+                            asp-route-slug="@(!string.IsNullOrWhiteSpace(personalSlug) ? personalSlug : null)"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            表示確認
+                          </a>
+                        </div>
                         <h5>カードを開いた後の詳細ページに出す内容</h5>
-                        <p>一覧から遷移した先の専用ページです。導入文、本文、箇条書きで情報量を増やします。</p>
                         <div class="field-grid is-single">
                           <div class="field field-full">
                             <label asp-for="Document.PersonalSection.Items[i].DetailSummary"></label>
-                            <textarea asp-for="Document.PersonalSection.Items[i].DetailSummary"></textarea>
-                            <p class="field-help">個別ページのヒーロー領域に表示する導入文です。未入力なら上の概要を流用します。</p>
+                            <p class="field-help">個別ページ上部の導入文です。未入力の場合は一覧カードの概要を使います。</p>
+                            <textarea asp-for="Document.PersonalSection.Items[i].DetailSummary" data-character-count data-character-limit="220"></textarea>
+                            <p class="field-help character-counter" aria-live="polite">0 / 220 文字目安</p>
                           </div>
                           <div class="field field-full">
                             <label asp-for="Document.PersonalSection.Items[i].DetailBody"></label>
-                            <textarea asp-for="Document.PersonalSection.Items[i].DetailBody"></textarea>
                             <p class="field-help">個別ページ本文です。空行で段落を分けると、そのまま段落として表示します。</p>
+                            <textarea asp-for="Document.PersonalSection.Items[i].DetailBody" data-character-count data-character-limit="1200"></textarea>
+                            <p class="field-help character-counter" aria-live="polite">0 / 1200 文字目安</p>
                           </div>
                           <div class="field field-full">
                             <label asp-for="Document.PersonalSection.Items[i].Points"></label>
-                            <textarea asp-for="Document.PersonalSection.Items[i].Points"></textarea>
                             <p class="field-help">個別ページの箇条書きに使います。1行につき1項目で入力してください。</p>
+                            <textarea asp-for="Document.PersonalSection.Items[i].Points" data-character-count data-character-limit="500"></textarea>
+                            <p class="field-help character-counter" aria-live="polite">0 / 500 文字目安</p>
                           </div>
                         </div>
                       </section>
 
-                      <section class="editor-scope-card is-shared" aria-label="共通設定">
-                        <span class="editor-scope-label">共通設定</span>
+                      <section class="editor-scope-card is-shared" id="personal-shared-@i" aria-label="共通素材" data-personal-tab-panel="shared">
+                        <span class="editor-scope-label">共通素材</span>
                         <h5>一覧カードと個別ページの両方で使う内容</h5>
-                        <p>画像とスタックはカードにも詳細にも出ます。見え方が両方で破綻しない内容にします。</p>
                         <div class="field-grid is-single">
                           <div class="field field-full image-field">
                             <label>活動写真</label>
@@ -987,16 +1119,19 @@
                                   <input id="personalImageFile-@i" name="@personalImageFieldName" type="file" accept=".jpg,.jpeg,.png,.webp,.gif" />
                                   <p class="field-help">JPG / PNG / WEBP / GIF に対応しています。5MBまでアップロードでき、画像URLより優先して保存されます。</p>
                                   <p class="field-help">写真をアップロードしない場合は、下の画像URLを使用します。説明文は alt として保存されます。</p>
-                                  <p class="field-help">画像URLは / で始まるサイト内パス、または http/https の URL のみ指定できます。</p>
+                                  <p class="field-help">画像URLは / で始まるサイト内パス、または https の URL のみ指定できます。</p>
 
                                   <div class="hero-upload-meta">
                                     <div class="field">
                                       <label asp-for="Document.PersonalSection.Items[i].ImageSrc"></label>
+                                      <p class="field-help">一覧カードと個別ページで使う画像 URL です。</p>
                                       <input asp-for="Document.PersonalSection.Items[i].ImageSrc" id="personalImageSrcInput-@i" />
                                     </div>
                                     <div class="field">
                                       <label asp-for="Document.PersonalSection.Items[i].ImageAlt"></label>
-                                      <input asp-for="Document.PersonalSection.Items[i].ImageAlt" id="personalImageAltInput-@i" />
+                                      <p class="field-help">画像が見えない場合にも内容が伝わる説明文です。例: 管理画面のスクリーンショット</p>
+                                      <input asp-for="Document.PersonalSection.Items[i].ImageAlt" id="personalImageAltInput-@i" data-character-count data-character-limit="80" />
+                                      <p class="field-help character-counter" aria-live="polite">0 / 80 文字目安</p>
                                     </div>
                                   </div>
                                 </div>

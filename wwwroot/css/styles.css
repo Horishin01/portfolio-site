@@ -36,6 +36,72 @@ body {
   overflow-x: hidden;
 }
 
+.admin-session-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.55rem max(1rem, calc((100vw - var(--max-width)) / 2));
+  border-bottom: 1px solid rgba(15, 32, 53, 0.12);
+  background: rgba(15, 23, 42, 0.94);
+  color: #f8fafc;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+}
+
+.admin-session-bar > div,
+.admin-session-bar nav,
+.admin-session-bar form {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.admin-session-bar span {
+  color: #5eead4;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-session-bar strong {
+  font-size: 0.86rem;
+}
+
+.admin-session-bar a,
+.admin-session-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(248, 250, 252, 0.16);
+  background: rgba(248, 250, 252, 0.08);
+  color: #f8fafc;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.admin-session-bar a:hover,
+.admin-session-bar button:hover,
+.admin-session-bar a:focus-visible,
+.admin-session-bar button:focus-visible {
+  border-color: rgba(94, 234, 212, 0.42);
+  background: rgba(94, 234, 212, 0.12);
+  outline: none;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -83,6 +149,19 @@ a {
   width: min(calc(100% - 2rem), var(--max-width));
   margin: 0 auto;
   position: relative;
+}
+
+.error-page-shell {
+  padding: 4rem 0;
+}
+
+.error-panel {
+  margin-top: 4rem;
+}
+
+.error-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  max-width: none;
 }
 
 .site-header {
@@ -1215,14 +1294,95 @@ h4 {
 }
 
 .site-footer {
-  padding: 0 0 2rem;
+  display: grid;
+  gap: 1.4rem;
+  margin-top: 1rem;
+  padding: 1.5rem 0 2.2rem;
+  border-top: 1px solid var(--line);
   color: var(--muted);
 }
 
-.site-footer p {
+.footer-primary,
+.footer-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.footer-brand span:last-child {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.footer-brand strong,
+.footer-brand small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footer-brand strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.footer-brand small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.footer-nav,
+.footer-links {
   margin: 0;
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: 0.55rem;
+}
+
+.footer-nav a,
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.2rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.footer-nav a {
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: 0.04em;
+}
+
+.footer-nav a:hover,
+.footer-links a:hover {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--text);
+}
+
+.footer-secondary {
+  padding-top: 1rem;
+  border-top: 1px solid rgba(23, 33, 47, 0.08);
+  font-size: 0.86rem;
+}
+
+.footer-secondary p {
+  margin: 0;
 }
 
 .reveal {
@@ -1394,6 +1554,17 @@ h4 {
 }
 
 @media (max-width: 720px) {
+  .admin-session-bar,
+  .admin-session-bar nav {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-session-bar a,
+  .admin-session-bar button {
+    width: 100%;
+  }
+
   .page-shell {
     width: min(calc(100% - 1.2rem), var(--max-width));
   }
@@ -1473,9 +1644,19 @@ h4 {
   }
 
   .work-meta,
-  .site-footer p {
+  .footer-primary,
+  .footer-secondary {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .footer-nav,
+  .footer-links {
+    justify-content: flex-start;
+  }
+
+  .footer-brand {
+    width: 100%;
   }
 
   .contact-actions,

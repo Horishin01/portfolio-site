@@ -2,6 +2,7 @@
     var pageTitle = ViewData["Title"] as string ?? "Portfolio Admin";
     var defaultFaviconHref = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f766e'/%3E%3Ctext x='50%25' y='57%25' font-size='28' font-family='Arial,sans-serif' font-weight='700' text-anchor='middle' fill='white'%3EST%3C/text%3E%3C/svg%3E";
     var faviconHref = PublicUrlSanitizer.SanitizeFaviconUrlOrDefault(ViewData["FaviconHref"] as string, defaultFaviconHref);
+    var adminSessionEvent = TempData["AdminSessionEvent"] as string ?? "";
 }
 <!DOCTYPE html>
 <html lang="ja">
@@ -27,8 +28,9 @@
     />
     <link rel="stylesheet" href="~/css/admin.css" asp-append-version="true" />
   </head>
-  <body>
+  <body data-admin-context="admin" data-admin-session-event="@adminSessionEvent">
     @RenderBody()
+    <script src="~/js/admin-session-sync.js" asp-append-version="true"></script>
     <script src="~/js/admin.js" asp-append-version="true"></script>
     @RenderSection("Scripts", required: false)
   </body>

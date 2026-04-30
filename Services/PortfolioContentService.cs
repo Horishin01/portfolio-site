@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using PortfolioSite.Data;
 using PortfolioSite.Models.Content;
+using PortfolioSite.Security;
 
 namespace PortfolioSite.Services;
 
@@ -100,9 +101,9 @@ public sealed class PortfolioContentService
         }
 
         record.AdsenseIsEnabled = adsense.IsEnabled;
-        record.AdsensePublisherId = NormalizeOptionalText(adsense.PublisherId);
-        record.AdsenseHeadScript = NormalizeOptionalText(adsense.HeadScript);
-        record.AdsenseBodyScript = NormalizeOptionalText(adsense.BodyScript);
+        record.AdsensePublisherId = GoogleAdsensePublisherId.Normalize(adsense.PublisherId);
+        record.AdsenseHeadScript = "";
+        record.AdsenseBodyScript = "";
         record.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -152,9 +153,9 @@ public sealed class PortfolioContentService
             Adsense = new AdsenseContent
             {
                 IsEnabled = record.AdsenseIsEnabled,
-                PublisherId = record.AdsensePublisherId,
-                HeadScript = record.AdsenseHeadScript,
-                BodyScript = record.AdsenseBodyScript
+                PublisherId = GoogleAdsensePublisherId.Normalize(record.AdsensePublisherId),
+                HeadScript = "",
+                BodyScript = ""
             },
             Profile = new ProfileContent
             {
@@ -425,9 +426,9 @@ public sealed class PortfolioContentService
         record.MetaDescription = document.MetaDescription;
         record.FaviconSrc = document.FaviconSrc;
         record.AdsenseIsEnabled = document.Adsense.IsEnabled;
-        record.AdsensePublisherId = document.Adsense.PublisherId;
-        record.AdsenseHeadScript = document.Adsense.HeadScript;
-        record.AdsenseBodyScript = document.Adsense.BodyScript;
+        record.AdsensePublisherId = GoogleAdsensePublisherId.Normalize(document.Adsense.PublisherId);
+        record.AdsenseHeadScript = "";
+        record.AdsenseBodyScript = "";
         record.ProfileName = document.Profile.Name;
         record.ProfileShortName = document.Profile.ShortName;
         record.ProfileRole = document.Profile.Role;
@@ -507,6 +508,11 @@ public sealed class PortfolioContentService
         foreach (var item in document.CareerSection.Items)
         {
             item.Period = EmptyIfNull(item.Period);
+            item.PeriodStartYear = EmptyIfNull(item.PeriodStartYear);
+            item.PeriodStartMonth = EmptyIfNull(item.PeriodStartMonth);
+            item.PeriodEndYear = EmptyIfNull(item.PeriodEndYear);
+            item.PeriodEndMonth = EmptyIfNull(item.PeriodEndMonth);
+            item.ApplyPeriodFromYearFields();
             item.Category = EmptyIfNull(item.Category);
             item.Organization = EmptyIfNull(item.Organization);
             item.Title = EmptyIfNull(item.Title);
@@ -654,6 +660,10 @@ public sealed class PortfolioContentService
                     .Select(item => new CareerItem
                     {
                         Period = item.Period,
+                        PeriodStartYear = item.PeriodStartYear,
+                        PeriodStartMonth = item.PeriodStartMonth,
+                        PeriodEndYear = item.PeriodEndYear,
+                        PeriodEndMonth = item.PeriodEndMonth,
                         Category = item.Category,
                         Organization = item.Organization,
                         Title = item.Title,

@@ -82,7 +82,7 @@
 	      <a class="button button-secondary" asp-action="Adsense">AdSense を見る</a>
 	      <a class="button button-secondary" asp-action="Account">アカウント設定</a>
 	      <a class="button button-secondary" asp-controller="Home" asp-action="Index">サイトを見る</a>
-	      <form asp-action="Logout" method="post" class="inline-form">
+	      <form asp-action="Logout" method="post" class="inline-form" data-admin-session-event-submit="logout">
 	        <button class="button button-ghost" type="submit">ログアウト</button>
       </form>
     </div>

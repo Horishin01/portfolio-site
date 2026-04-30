@@ -109,11 +109,19 @@ builder.Services.AddIdentity<AdminUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<PortfolioDbContext>()
     .AddDefaultTokenProviders();
 
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.Zero;
+});
+
 builder.Services.ConfigureApplicationCookie(options =>
     {
         options.Cookie.Name = "portfolio_admin";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
         options.LoginPath = "/admin/login";
         options.AccessDeniedPath = "/admin/login";
         options.SlidingExpiration = true;
@@ -157,10 +165,10 @@ app.Use(async (context, next) =>
             "form-action 'self'; " +
             "frame-ancestors 'self'; " +
             "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://www.google.com; " +
-            "img-src 'self' data: http: https:; " +
+            "img-src 'self' data: https:; " +
             "object-src 'none'; " +
-            "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; " +
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com";
+            "script-src 'self' https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; " +
+            "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com";
         headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
         headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
         headers["X-Content-Type-Options"] = "nosniff";

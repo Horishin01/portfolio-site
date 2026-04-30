@@ -7,6 +7,7 @@ public sealed class AdminAccountViewModel
     public string CurrentLoginId { get; init; } = "";
     public AdminChangeLoginIdViewModel LoginIdForm { get; set; } = new();
     public AdminChangePasswordViewModel PasswordForm { get; set; } = new();
+    public AdminTwoFactorPreparationViewModel TwoFactor { get; set; } = new();
 }
 
 public sealed class AdminChangeLoginIdViewModel
@@ -40,4 +41,19 @@ public sealed class AdminChangePasswordViewModel
     [Required(ErrorMessage = "確認用パスワードを入力してください。")]
     [Compare(nameof(NewPassword), ErrorMessage = "新しいパスワードと確認用パスワードが一致しません。")]
     public string ConfirmPassword { get; set; } = "";
+}
+
+public sealed class AdminTwoFactorPreparationViewModel
+{
+    public bool IsEnabled { get; init; }
+    public bool HasAuthenticatorKey { get; init; }
+    public string SharedKey { get; init; } = "";
+    public string AuthenticatorUri { get; init; } = "";
+    public string[] SupportedApps { get; init; } =
+    [
+        "Google Authenticator",
+        "Microsoft Authenticator",
+        "1Password",
+        "Authy"
+    ];
 }

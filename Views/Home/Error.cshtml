@@ -2,10 +2,10 @@
     ViewData["Title"] = "Application Error";
     ViewData["MetaDescription"] = "Application Error";
 }
-<div class="page-shell" style="padding: 4rem 0;">
-  <section class="panel" style="margin-top: 4rem;">
+<div class="page-shell error-page-shell">
+  <section class="panel error-panel">
     <p class="eyebrow">ERROR</p>
-    <h1 style="font-size: clamp(2rem, 5vw, 3rem); max-width: none;">ページを表示できませんでした。</h1>
+    <h1 class="error-title">ページを表示できませんでした。</h1>
     <p class="hero-summary">時間を置いて再度アクセスしてください。問題が続く場合は設定と DB 接続を確認してください。</p>
     <a class="button" asp-controller="Home" asp-action="Index">トップへ戻る</a>
   </section>

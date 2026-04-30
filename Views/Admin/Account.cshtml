@@ -143,6 +143,61 @@
       </article>
     </div>
 
+    <article class="account-settings-card two-factor-prep-card">
+      <div class="account-settings-header">
+        <span class="portal-card-label">Two-step verification</span>
+        <h2>二段階認証の準備</h2>
+        <p>
+          Google Authenticator や Microsoft Authenticator などの TOTP アプリを使う前提の実装基盤です。
+          現段階ではログイン時の二段階認証は強制しません。
+        </p>
+      </div>
+
+      <div class="two-factor-status-grid">
+        <div class="two-factor-status-item">
+          <span>ログイン時の要求</span>
+          <strong>@(Model.TwoFactor.IsEnabled ? "有効" : "未有効化")</strong>
+        </div>
+        <div class="two-factor-status-item">
+          <span>認証アプリ用キー</span>
+          <strong>@(Model.TwoFactor.HasAuthenticatorKey ? "発行済み" : "未発行")</strong>
+        </div>
+      </div>
+
+      @if (Model.TwoFactor.HasAuthenticatorKey)
+      {
+        <div class="account-settings-form">
+          <div class="field">
+            <label>セットアップキー</label>
+            <input value="@Model.TwoFactor.SharedKey" readonly />
+            <p class="field-help">認証アプリへ手入力する場合のキーです。QR コード表示は将来実装用として未接続です。</p>
+          </div>
+          <div class="field">
+            <label>otpauth URI</label>
+            <textarea class="two-factor-uri-field" readonly>@Model.TwoFactor.AuthenticatorUri</textarea>
+            <p class="field-help">QR コード生成や検証画面を実装する際に使用する URI です。</p>
+          </div>
+        </div>
+      }
+      else
+      {
+        <p class="field-help">準備を開始すると、現在の管理者アカウント用に TOTP の共有キーを発行します。</p>
+      }
+
+      <div class="two-factor-app-list" aria-label="利用想定アプリ">
+        @foreach (var appName in Model.TwoFactor.SupportedApps)
+        {
+          <span>@appName</span>
+        }
+      </div>
+
+      <form asp-action="PrepareTwoFactorAuthenticator" method="post" class="portal-actions">
+        <button class="button button-secondary" type="submit">
+          @(Model.TwoFactor.HasAuthenticatorKey ? "登録用キーを再発行" : "登録用キーを発行")
+        </button>
+      </form>
+    </article>
+
     <div class="portal-actions">
       <a class="button button-ghost" asp-action="Index">ポータルへ戻る</a>
       <a class="button button-secondary" asp-action="Edit">編集画面へ</a>

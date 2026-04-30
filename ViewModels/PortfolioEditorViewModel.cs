@@ -63,6 +63,11 @@ public sealed class PortfolioEditorViewModel
             category.Items ??= [];
         }
 
+        foreach (var item in Document.CareerSection.Items)
+        {
+            item.EnsurePeriodYearFields();
+        }
+
         foreach (var item in Document.PersonalSection.Items)
         {
             item.DetailSummary ??= "";
@@ -84,6 +89,11 @@ public sealed class PortfolioEditorViewModel
         Normalize();
         Document.Profile.Tags = JoinLines(ProfileTagEntries);
         Document.ProfileSection.Certifications = JoinLines(CertificationEntries);
+
+        foreach (var item in Document.CareerSection.Items)
+        {
+            item.ApplyPeriodFromYearFields();
+        }
     }
 
     private static List<string> SplitLines(string? value)

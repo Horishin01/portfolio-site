@@ -2,6 +2,19 @@ namespace PortfolioSite.ViewModels;
 
 public static class PortfolioEditorOptionCatalog
 {
+    private const int CareerStartYear = 1900;
+
+    public static IReadOnlyList<string> CareerYearOptions =>
+        Enumerable.Range(CareerStartYear, DateTime.Now.Year - CareerStartYear + 2)
+            .Select(year => year.ToString())
+            .Reverse()
+            .ToList();
+
+    public static IReadOnlyList<string> MonthOptions { get; } =
+        Enumerable.Range(1, 12)
+            .Select(month => month.ToString())
+            .ToList();
+
     public static IReadOnlyList<PortfolioEditorOptionGroup> ProfileTagGroups { get; } =
     [
         new("プログラム", ["C#", ".NET", "Python", "Java", "JavaScript", "TypeScript", "Bash", "PowerShell"]),

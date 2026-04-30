@@ -42,6 +42,15 @@
     var footerRole = string.IsNullOrWhiteSpace(document.FooterRole)
         ? document.Profile.Role
         : document.FooterRole;
+    var safeContactLinks = document.Contact.Links
+        .Select(link => new
+        {
+            Link = link,
+            Href = PublicUrlSanitizer.SanitizeLinkUrl(link.Href)
+        })
+        .Where(entry => !string.IsNullOrWhiteSpace(entry.Href))
+        .ToList();
+    var currentYear = DateTime.Now.Year;
 
     ViewData["Title"] = string.IsNullOrWhiteSpace(document.SiteTitle)
         ? item.Title
@@ -225,11 +234,43 @@
     }
   </main>
 
-  <footer class="site-footer">
-    <p>
-      <span>@document.Profile.Name</span>
-      <span>·</span>
-      <span>@footerRole</span>
-    </p>
+  <footer class="site-footer" aria-label="サイトフッター">
+    <div class="footer-primary">
+      <a class="footer-brand" asp-action="Index" asp-controller="Home" aria-label="トップページへ移動">
+        <span class="brand-mark">@shortName</span>
+        <span>
+          <strong>@document.Profile.Name</strong>
+          <small>@footerRole</small>
+        </span>
+      </a>
+
+      <nav class="footer-nav" aria-label="フッターナビゲーション">
+        <a asp-action="Index" asp-controller="Home" asp-fragment="profile">PROFILE</a>
+        <a asp-action="Index" asp-controller="Home" asp-fragment="career">CAREER</a>
+        <a asp-action="Index" asp-controller="Home" asp-fragment="skills">SKILL</a>
+        <a asp-action="Index" asp-controller="Home" asp-fragment="works">WORKS</a>
+        <a asp-action="Index" asp-controller="Home" asp-fragment="personal">PERSONAL</a>
+        <a asp-action="Index" asp-controller="Home" asp-fragment="contact">CONTACT</a>
+      </nav>
+    </div>
+
+    <div class="footer-secondary">
+      <p>&copy; @currentYear @document.Profile.Name</p>
+      <div class="footer-links">
+        @if (!string.IsNullOrWhiteSpace(document.Contact.Email))
+        {
+            <a href="mailto:@document.Contact.Email">メール</a>
+        }
+        @foreach (var entry in safeContactLinks)
+        {
+            var isExternalLink = PublicUrlSanitizer.IsExternalHttpLink(entry.Href);
+            <a
+              href="@entry.Href"
+              target="@(isExternalLink ? "_blank" : null)"
+              rel="@(isExternalLink ? "noreferrer" : null)"
+            >@entry.Link.Label</a>
+        }
+      </div>
+    </div>
   </footer>
 </div>
