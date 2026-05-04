@@ -14,6 +14,15 @@ public static class PortfolioDatabaseOptions
             return;
         }
 
+        if (UsesPostgres(connectionString))
+        {
+            optionsBuilder.UseNpgsql(
+                connectionString,
+                npgsqlOptions => npgsqlOptions.EnableRetryOnFailure()
+            );
+            return;
+        }
+
         optionsBuilder.UseMySql(
             connectionString,
             new MySqlServerVersion(new Version(8, 0, 36)),
@@ -27,6 +36,15 @@ public static class PortfolioDatabaseOptions
         return normalized.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("DataSource=", StringComparison.OrdinalIgnoreCase)
             || normalized.StartsWith("Filename=", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static bool UsesPostgres(string connectionString)
+    {
+        var normalized = connectionString.TrimStart();
+        return normalized.StartsWith("Host=", StringComparison.OrdinalIgnoreCase)
+            || normalized.StartsWith("Username=", StringComparison.OrdinalIgnoreCase)
+            || (normalized.StartsWith("User ID=", StringComparison.OrdinalIgnoreCase)
+                && normalized.Contains("Host=", StringComparison.OrdinalIgnoreCase));
     }
 
     private static void EnsureSqliteDirectoryExists(string connectionString)

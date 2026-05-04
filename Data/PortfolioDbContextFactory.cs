@@ -9,6 +9,8 @@ public sealed class PortfolioDbContextFactory : IDesignTimeDbContextFactory<Port
     private const string PlaceholderConnectionString = "__SET_BY_SECRETS_OR_ENV__";
     private const string DesignTimeMySqlConnectionString =
         "Server=127.0.0.1;Port=3306;Database=portfolio_site_design_time;User ID=design_time;Password=design_time;CharSet=utf8mb4;";
+    private const string DesignTimePostgresConnectionString =
+        "Host=127.0.0.1;Port=5432;Database=portfolio_site_design_time;Username=design_time;Password=design_time;";
     private const string DesignTimeSqliteConnectionString =
         "Data Source=LocalData/DesignTime/portfolio-site.design-time.db";
 
@@ -43,9 +45,10 @@ public sealed class PortfolioDbContextFactory : IDesignTimeDbContextFactory<Port
         return provider.Trim().ToLowerInvariant() switch
         {
             "mysql" => "mysql",
+            "postgres" or "postgresql" => "postgres",
             "sqlite" => "sqlite",
             _ => throw new InvalidOperationException(
-                "Unknown design-time database provider. Use --provider mysql or --provider sqlite.")
+                "Unknown design-time database provider. Use --provider mysql, --provider postgres, or --provider sqlite.")
         };
     }
 
@@ -59,9 +62,12 @@ public sealed class PortfolioDbContextFactory : IDesignTimeDbContextFactory<Port
         {
             "mysql" when hasConfiguredConnectionString && !PortfolioDatabaseOptions.UsesSqlite(configuredConnectionString!) =>
                 configuredConnectionString!,
+            "postgres" when hasConfiguredConnectionString && PortfolioDatabaseOptions.UsesPostgres(configuredConnectionString!) =>
+                configuredConnectionString!,
             "sqlite" when hasConfiguredConnectionString && PortfolioDatabaseOptions.UsesSqlite(configuredConnectionString!) =>
                 configuredConnectionString!,
             "mysql" => DesignTimeMySqlConnectionString,
+            "postgres" => DesignTimePostgresConnectionString,
             "sqlite" => DesignTimeSqliteConnectionString,
             _ => throw new InvalidOperationException($"Unsupported migration provider '{migrationProvider}'.")
         };

@@ -61,6 +61,12 @@ public sealed class PortfolioDbInitializer
 
     private async Task EnsureDatabaseSchemaAsync(CancellationToken cancellationToken)
     {
+        if (_dbContext.Database.IsNpgsql())
+        {
+            await _dbContext.Database.EnsureCreatedAsync(cancellationToken);
+            return;
+        }
+
         if (_dbContext.Database.IsSqlite())
         {
             if (await HasLegacyJsonSchemaAsync(cancellationToken))
