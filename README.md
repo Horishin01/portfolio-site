@@ -312,6 +312,10 @@ sudo systemctl reload apache2
 
 Apache を使う場合は `mod_proxy_http` が `X-Forwarded-For` と `X-Forwarded-Host` を付与し、サンプル設定で `X-Forwarded-Proto` も付けています。公開側を HTTPS にする場合も `RequestHeader set X-Forwarded-Proto expr=%{REQUEST_SCHEME}` を残してください。
 
+Apache のログは標準の `/var/log/apache2/access.log` と `/var/log/apache2/error.log` に保存します。ローテーションは Ubuntu 標準の `/etc/logrotate.d/apache2` を使い、サイト専用のログファイルやローテーション設定は追加しません。
+
+既存サーバーで `000-default.conf` などの仮想ホストを使っている場合は、そのファイルの `ErrorLog` と `CustomLog` を標準名へ変更します。同じサイトの仮想ホストを重複して追加しないでください。
+
 更新時にやること:
 
 1. 手元で `dotnet publish` を作り直す
